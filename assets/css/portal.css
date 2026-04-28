@@ -1,0 +1,174 @@
+.page-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.portal-hero,
+.dashboard-hero,
+.auth-layout,
+.panel-grid {
+  grid-template-columns: 1.15fr 0.85fr;
+}
+
+.stats-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.portal-card-grid,
+.feature-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-management {
+  grid-template-columns: minmax(360px, 0.88fr) minmax(0, 1.12fr);
+  align-items: start;
+}
+
+.admin-management > .card {
+  font-size: 0.94rem;
+}
+
+.admin-management > .card h2 {
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+}
+
+.admin-management > .card > p {
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.admin-management label,
+.admin-management input,
+.admin-management select,
+.admin-management textarea,
+.admin-management .muted,
+.admin-management .table-meta,
+.admin-management .users-table,
+.admin-management .users-table th,
+.admin-management .users-table td,
+.admin-management .status-pill,
+.admin-management .table-check,
+.admin-management .role-option,
+.admin-management .button,
+.admin-management .button-secondary {
+  font-size: 0.92rem;
+}
+
+.admin-management .section-tag {
+  font-size: 0.7rem;
+}
+
+.admin-management .role-option small {
+  font-size: 0.84rem;
+}
+
+.admin-management .users-table thead th {
+  font-size: 0.74rem;
+}
+
+.admin-management .table-actions {
+  gap: 0.75rem;
+}
+
+.compact-product-form {
+  gap: 0.45rem;
+}
+
+.compact-product-form label {
+  margin-bottom: 0;
+}
+
+.audioprint-trend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.audioprint-trend-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0 0.9rem;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.audioprint-trend-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.audioprint-analysis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.audioprint-summary-grid,
+.audioprint-plot-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.audioprint-summary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.audioprint-plot-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.audioprint-image,
+.audioprint-thumb {
+  width: 100%;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 199, 77, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.audioprint-image {
+  margin-top: 1rem;
+}
+
+.audioprint-thumb {
+  margin-top: 0.85rem;
+}
+
+.audioprint-insights,
+.audioprint-meta-list {
+  margin: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.audioprint-insights {
+  padding-left: 1.2rem;
+}
+
+.audioprint-meta-list span {
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 1080px) {
+  .portal-hero,
+  .dashboard-hero,
+  .auth-layout,
+  .panel-grid,
+  .audioprint-analysis-grid,
+  .admin-management,
+  .stats-grid,
+  .portal-card-grid,
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .audioprint-summary-grid,
+  .audioprint-plot-grid {
+    grid-template-columns: 1fr;
+  }
+}

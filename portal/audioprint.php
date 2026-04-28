@@ -411,6 +411,50 @@ function audioprint_group_metric_rows(array $rows): array
     return $groups;
 }
 
+function audioprint_canonical_metric_groups(array $analysis): array
+{
+    $metrics = $analysis['metrics'] ?? null;
+    if (!is_array($metrics) || !is_array($metrics['groups'] ?? null)) {
+        return [];
+    }
+
+    $groups = [];
+    foreach ($metrics['groups'] as $group) {
+        if (!is_array($group) || !is_array($group['metrics'] ?? null)) {
+            continue;
+        }
+
+        $category = (string) ($group['label'] ?? $group['key'] ?? 'General');
+        foreach ($group['metrics'] as $metric) {
+            if (!is_array($metric) || !array_key_exists('value', $metric)) {
+                continue;
+            }
+
+            $groups[$category][] = [
+                'category' => $category,
+                'metric' => (string) ($metric['label'] ?? $metric['key'] ?? 'Metrica'),
+                'path' => (string) ($metric['source'] ?? $metric['key'] ?? ''),
+                'value' => audioprint_format_metric_value($metric['value']),
+                'unit' => (string) ($metric['unit'] ?? ''),
+                'status_label' => (string) ($metric['description'] ?? 'Metrica canonica'),
+                'status_class' => 'is-neutral',
+            ];
+        }
+    }
+
+    return $groups;
+}
+
+function audioprint_metric_groups_for_csv(array $analysis): array
+{
+    $canonicalGroups = audioprint_canonical_metric_groups($analysis);
+    if ($canonicalGroups !== []) {
+        return $canonicalGroups;
+    }
+
+    return audioprint_group_metric_rows(audioprint_build_metric_rows($analysis));
+}
+
 function audioprint_output_metrics_csv(array $groups, string $filename): never
 {
     header('Content-Type: text/csv; charset=UTF-8');
@@ -423,7 +467,7 @@ function audioprint_output_metrics_csv(array $groups, string $filename): never
     }
 
     fwrite($output, "\xEF\xBB\xBF");
-    fputcsv($output, ['categoria', 'metrica', 'valor', 'unidad', 'lectura', 'ruta_json']);
+    fputcsv($output, ['categoria', 'metrica', 'valor', 'unidad', 'descripcion', 'fuente']);
     foreach ($groups as $category => $rows) {
         foreach ($rows as $row) {
             fputcsv($output, [
@@ -442,7 +486,7 @@ function audioprint_output_metrics_csv(array $groups, string $filename): never
 }
 
 $selectedInsights = is_array($selectedAnalysis) ? audioprint_build_insights($selectedAnalysis) : [];
-$selectedMetricGroups = is_array($selectedAnalysis) ? audioprint_group_metric_rows(audioprint_build_metric_rows($selectedAnalysis)) : [];
+$selectedMetricGroups = is_array($selectedAnalysis) ? audioprint_metric_groups_for_csv($selectedAnalysis) : [];
 
 if (
     $selectedAnalysisJob !== null

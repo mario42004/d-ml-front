@@ -411,8 +411,47 @@ function audioprint_group_metric_rows(array $rows): array
     return $groups;
 }
 
+function audioprint_output_metrics_csv(array $groups, string $filename): never
+{
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+
+    $output = fopen('php://output', 'wb');
+    if ($output === false) {
+        exit;
+    }
+
+    fwrite($output, "\xEF\xBB\xBF");
+    fputcsv($output, ['categoria', 'metrica', 'valor', 'unidad', 'lectura', 'ruta_json']);
+    foreach ($groups as $category => $rows) {
+        foreach ($rows as $row) {
+            fputcsv($output, [
+                $category,
+                $row['metric'],
+                $row['value'],
+                $row['unit'],
+                $row['status_label'],
+                $row['path'],
+            ]);
+        }
+    }
+
+    fclose($output);
+    exit;
+}
+
 $selectedInsights = is_array($selectedAnalysis) ? audioprint_build_insights($selectedAnalysis) : [];
 $selectedMetricGroups = is_array($selectedAnalysis) ? audioprint_group_metric_rows(audioprint_build_metric_rows($selectedAnalysis)) : [];
+
+if (
+    $selectedAnalysisJob !== null
+    && $selectedMetricGroups !== []
+    && (string) ($_GET['download'] ?? '') === 'metrics_csv'
+) {
+    $csvName = 'audioprint_metrics_' . (int) $selectedAnalysisJob['id'] . '.csv';
+    audioprint_output_metrics_csv($selectedMetricGroups, $csvName);
+}
 
 $csrfToken = csrf_token();
 render_app_header('Audioprint | Mi espacio');
@@ -531,6 +570,9 @@ render_app_header('Audioprint | Mi espacio');
               <?php if (!empty($selectedAnalysisJob['analysis_url'])): ?>
                 <a class="button-secondary" href="<?= htmlspecialchars((string) $selectedAnalysisJob['analysis_url'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noreferrer">Descargar JSON</a>
               <?php endif; ?>
+              <?php if ($selectedMetricGroups !== []): ?>
+                <a class="button-secondary" href="/portal/audioprint.php?analysis_id=<?= (int) $selectedAnalysisJob['id'] ?>&download=metrics_csv">Descargar métricas CSV</a>
+              <?php endif; ?>
               <a class="button-secondary" href="/portal/audioprint.php">Cerrar analisis</a>
             </div>
           </article>
@@ -606,6 +648,14 @@ render_app_header('Audioprint | Mi espacio');
               <strong>Tiempo-frecuencia</strong>
               <p><?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['analysis_engine', 'time_frequency_summary', 'status']), ENT_QUOTES, 'UTF-8') ?></p>
             </article>
+            <article class="feature-card">
+              <strong>Distancia entre picos</strong>
+              <p><?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'peak_distance_seconds']), ENT_QUOTES, 'UTF-8') ?> s</p>
+            </article>
+            <article class="feature-card">
+              <strong>Picos autocorrelacion</strong>
+              <p><?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'peak_count']), ENT_QUOTES, 'UTF-8') ?></p>
+            </article>
           </div>
 
           <article class="helper">
@@ -643,60 +693,17 @@ render_app_header('Audioprint | Mi espacio');
             <article class="detail-card">
               <strong><?= htmlspecialchars((string) ($autocorrelationPlot['title'] ?? 'Autocorrelation'), ENT_QUOTES, 'UTF-8') ?></strong>
               <p><?= htmlspecialchars((string) ($autocorrelationPlot['description'] ?? 'Grafica de autocorrelacion del audio seleccionado.'), ENT_QUOTES, 'UTF-8') ?></p>
+              <div class="audioprint-peak-grid">
+                <span>Primer pico: <?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'strongest_peak_lag_seconds']), ENT_QUOTES, 'UTF-8') ?> s</span>
+                <span>Segundo pico: <?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'second_peak_lag_seconds']), ENT_QUOTES, 'UTF-8') ?> s</span>
+                <span>Distancia: <?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'peak_distance_seconds']), ENT_QUOTES, 'UTF-8') ?> s</span>
+                <span>Muestras: <?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'peak_distance_samples']), ENT_QUOTES, 'UTF-8') ?></span>
+              </div>
               <img class="audioprint-image" src="data:image/png;base64,<?= htmlspecialchars((string) $autocorrelationPlot['image_base64'], ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) ($autocorrelationPlot['title'] ?? 'Autocorrelation'), ENT_QUOTES, 'UTF-8') ?>">
             </article>
           <?php endif; ?>
         </div>
       </div>
-
-      <?php if ($selectedMetricGroups !== []): ?>
-        <section class="audioprint-metrics-section">
-          <div class="section-heading">
-            <span class="section-tag">Metricas completas</span>
-            <h3>Tabla tecnica del JSON</h3>
-            <p>Lectura agrupada de las metricas escalares del analisis. Los graficos quedan como vista visual, pero esta tabla conserva el detalle operativo para comparar, auditar y documentar cada audio.</p>
-          </div>
-
-          <div class="audioprint-metric-groups">
-            <?php foreach ($selectedMetricGroups as $category => $rows): ?>
-              <article class="detail-card audioprint-metric-group">
-                <div class="audioprint-metric-group-head">
-                  <strong><?= htmlspecialchars($category, ENT_QUOTES, 'UTF-8') ?></strong>
-                  <span><?= count($rows) ?> metricas</span>
-                </div>
-                <div class="table-shell">
-                  <table class="users-table metrics-table">
-                    <thead>
-                      <tr>
-                        <th>Metrica</th>
-                        <th>Valor</th>
-                        <th>Unidad</th>
-                        <th>Lectura</th>
-                        <th>Ruta JSON</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <?php foreach ($rows as $row): ?>
-                        <tr>
-                          <td><strong><?= htmlspecialchars((string) $row['metric'], ENT_QUOTES, 'UTF-8') ?></strong></td>
-                          <td><?= htmlspecialchars((string) $row['value'], ENT_QUOTES, 'UTF-8') ?></td>
-                          <td><?= htmlspecialchars((string) $row['unit'], ENT_QUOTES, 'UTF-8') ?></td>
-                          <td>
-                            <span class="metric-badge <?= htmlspecialchars((string) $row['status_class'], ENT_QUOTES, 'UTF-8') ?>">
-                              <?= htmlspecialchars((string) $row['status_label'], ENT_QUOTES, 'UTF-8') ?>
-                            </span>
-                          </td>
-                          <td><code><?= htmlspecialchars((string) $row['path'], ENT_QUOTES, 'UTF-8') ?></code></td>
-                        </tr>
-                      <?php endforeach; ?>
-                    </tbody>
-                  </table>
-                </div>
-              </article>
-            <?php endforeach; ?>
-          </div>
-        </section>
-      <?php endif; ?>
     </article>
   <?php endif; ?>
 

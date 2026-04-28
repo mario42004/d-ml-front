@@ -550,7 +550,7 @@ render_app_header('Audioprint | Mi espacio');
     <article class="card" id="analysis-detail">
       <span class="section-tag">Analisis</span>
       <h2>Detalle del audio seleccionado</h2>
-      <p>Este bloque se abre bajo demanda desde el historial. Cada audio conserva su propio analisis, su imagen principal y su JSON asociado.</p>
+      <p>Este bloque se abre bajo demanda desde el historial. Cada audio conserva su visual principal, autocorrelacion y metricas descargables.</p>
 
       <div class="audioprint-analysis-grid">
         <div class="stack">
@@ -566,9 +566,6 @@ render_app_header('Audioprint | Mi espacio');
               <a class="button-secondary" href="<?= htmlspecialchars((string) $selectedAnalysisJob['audio_url'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noreferrer">Abrir audio</a>
               <?php if (!empty($selectedAnalysisJob['scalogram_url'])): ?>
                 <a class="button" href="<?= htmlspecialchars((string) $selectedAnalysisJob['scalogram_url'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noreferrer">Abrir imagen</a>
-              <?php endif; ?>
-              <?php if (!empty($selectedAnalysisJob['analysis_url'])): ?>
-                <a class="button-secondary" href="<?= htmlspecialchars((string) $selectedAnalysisJob['analysis_url'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noreferrer">Descargar JSON</a>
               <?php endif; ?>
               <?php if ($selectedMetricGroups !== []): ?>
                 <a class="button-secondary" href="/portal/audioprint.php?analysis_id=<?= (int) $selectedAnalysisJob['id'] ?>&download=metrics_csv">Descargar métricas CSV</a>
@@ -658,37 +655,6 @@ render_app_header('Audioprint | Mi espacio');
             </article>
           </div>
 
-          <article class="helper">
-            <strong>Interpretacion inicial</strong>
-            <ul class="audioprint-insights">
-              <?php foreach ($selectedInsights as $insight): ?>
-                <li><?= htmlspecialchars($insight, ENT_QUOTES, 'UTF-8') ?></li>
-              <?php endforeach; ?>
-            </ul>
-          </article>
-
-          <article class="detail-card">
-            <strong>Metadatos del analisis</strong>
-            <div class="audioprint-meta-list">
-              <span>Archivo: <?= htmlspecialchars((string) ($selectedAnalysisJob['original_filename'] ?? 'audio'), ENT_QUOTES, 'UTF-8') ?></span>
-              <span>Tamano: <?= htmlspecialchars((string) ($selectedAnalysisJob['audio_size_bytes'] ?? '0'), ENT_QUOTES, 'UTF-8') ?> bytes</span>
-              <span>Sample rate original: <?= htmlspecialchars(audioprint_analysis_value_any($selectedAnalysis, [
-                  ['analysis_engine', 'quality', 'sample_rate_original'],
-                  ['audio_metadata', 'original_sample_rate'],
-              ]), ENT_QUOTES, 'UTF-8') ?> Hz</span>
-              <span>Version de analisis: <?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['analysis_version']), ENT_QUOTES, 'UTF-8') ?></span>
-              <span>Analysis engine: <?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['analysis_engine', 'version']), ENT_QUOTES, 'UTF-8') ?></span>
-              <span>Estado engine: <?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['analysis_engine', 'status']), ENT_QUOTES, 'UTF-8') ?></span>
-              <span>Frames internos: <?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['analysis_engine', 'framing', 'frame_count']), ENT_QUOTES, 'UTF-8') ?> x <?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['analysis_engine', 'framing', 'frame_duration_seconds']), ENT_QUOTES, 'UTF-8') ?>s</span>
-              <span>Visual principal: <?= htmlspecialchars($primaryKey, ENT_QUOTES, 'UTF-8') ?></span>
-              <span>Picos energeticos detectados: <?= htmlspecialchars(audioprint_analysis_value_any($selectedAnalysis, [
-                  ['analysis_engine', 'temporal_summary', 'num_energy_peaks'],
-                  ['autocorrelation_analysis', 'peak_count'],
-              ]), ENT_QUOTES, 'UTF-8') ?></span>
-              <span>Fecha de proceso: <?= htmlspecialchars((string) ($selectedAnalysisJob['processed_at'] ?? $selectedAnalysisJob['created_at'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span>
-            </div>
-          </article>
-
           <?php if (is_array($autocorrelationPlot) && !empty($autocorrelationPlot['image_base64'])): ?>
             <article class="detail-card">
               <strong><?= htmlspecialchars((string) ($autocorrelationPlot['title'] ?? 'Autocorrelation'), ENT_QUOTES, 'UTF-8') ?></strong>
@@ -749,7 +715,6 @@ render_app_header('Audioprint | Mi espacio');
                   <?php endif; ?>
                   <?php if (!empty($job['analysis_available']) && !empty($job['analysis_url'])): ?>
                     <a class="button-secondary" href="/portal/audioprint.php?analysis_id=<?= (int) $job['id'] ?>#analysis-detail">Analisis</a>
-                    <a class="button-secondary" href="<?= htmlspecialchars((string) $job['analysis_url'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noreferrer">Ver JSON</a>
                   <?php endif; ?>
                   <?php if (empty($job['scalogram_url']) && empty($job['analysis_available'])): ?>
                     <span class="muted">Pendiente</span>
@@ -807,7 +772,6 @@ render_app_header('Audioprint | Mi espacio');
                     <?php endif; ?>
                     <?php if (!empty($job['analysis_available']) && !empty($job['analysis_url'])): ?>
                       <a class="button-secondary" href="/portal/audioprint.php?analysis_id=<?= (int) $job['id'] ?>#analysis-detail">Analisis</a>
-                      <a class="button-secondary" href="<?= htmlspecialchars((string) $job['analysis_url'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noreferrer">Ver JSON</a>
                     <?php endif; ?>
                     <form method="post" action="/portal/audioprint.php" class="inline-form" onsubmit="return confirm('¿Estas seguro de que deseas eliminar este audio y su analisis asociado?');">
                       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">

@@ -213,7 +213,206 @@ function audioprint_build_insights(array $analysis): array
     return $insights;
 }
 
+function audioprint_metric_label(string $segment): string
+{
+    $labels = [
+        'analysis_engine' => 'Analysis engine',
+        'input_audio' => 'Audio de entrada',
+        'global_features' => 'Features globales',
+        'basic_features' => 'Features basicas',
+        'temporal_summary' => 'Resumen temporal',
+        'spectral_summary' => 'Resumen espectral',
+        'cepstral_summary' => 'Resumen cepstral',
+        'time_frequency_summary' => 'Tiempo-frecuencia',
+        'dashboard_ready' => 'Dashboard',
+        'quality' => 'Calidad',
+        'framing' => 'Framing',
+        'plots' => 'Graficos',
+        'audio_metadata' => 'Metadatos de audio',
+        'temporal_analysis' => 'Analisis temporal',
+        'spectral_analysis' => 'Analisis espectral',
+        'autocorrelation_analysis' => 'Autocorrelacion',
+    ];
+
+    if (isset($labels[$segment])) {
+        return $labels[$segment];
+    }
+
+    return ucfirst(str_replace('_', ' ', $segment));
+}
+
+function audioprint_metric_category(array $path): string
+{
+    $joined = implode('.', $path);
+    $rules = [
+        'analysis_engine.quality' => 'Calidad de senal',
+        'analysis_engine.input_audio' => 'Audio y framing',
+        'analysis_engine.framing' => 'Audio y framing',
+        'analysis_engine.global_features.basic_features' => 'Basicas',
+        'analysis_engine.temporal_summary' => 'Temporal',
+        'analysis_engine.spectral_summary' => 'Espectral',
+        'analysis_engine.cepstral_summary' => 'Cepstral',
+        'analysis_engine.time_frequency_summary' => 'Tiempo-frecuencia',
+        'analysis_engine.dashboard_ready' => 'Dashboard',
+        'audio_metadata' => 'Audio y framing',
+        'temporal_analysis' => 'Temporal',
+        'spectral_analysis' => 'Espectral',
+        'autocorrelation_analysis' => 'Temporal',
+    ];
+
+    foreach ($rules as $prefix => $category) {
+        if (str_starts_with($joined, $prefix)) {
+            return $category;
+        }
+    }
+
+    return 'General';
+}
+
+function audioprint_metric_unit(array $path, mixed $value): string
+{
+    $name = strtolower((string) end($path));
+    if (str_contains($name, 'sample_rate') || str_contains($name, 'frequency') || str_ends_with($name, '_hz') || str_contains($name, 'centroid') || str_contains($name, 'rolloff')) {
+        return 'Hz';
+    }
+    if (str_contains($name, 'duration') || str_contains($name, 'seconds') || str_ends_with($name, '_s')) {
+        return 's';
+    }
+    if (str_contains($name, '_db') || str_contains($name, 'decibel')) {
+        return 'dB';
+    }
+    if (str_contains($name, 'bytes') || str_contains($name, 'size')) {
+        return 'bytes';
+    }
+    if (str_contains($name, 'ratio') || str_contains($name, 'rate') || str_contains($name, 'flatness') || str_contains($name, 'stability')) {
+        return 'ratio';
+    }
+    if (is_bool($value)) {
+        return 'bool';
+    }
+
+    return '';
+}
+
+function audioprint_metric_status(array $path, mixed $value): array
+{
+    $name = strtolower((string) end($path));
+    $numericValue = is_numeric($value) ? (float) $value : null;
+
+    if ($numericValue !== null && str_contains($name, 'clipping')) {
+        if ($numericValue >= 0.01) {
+            return ['label' => 'Alerta', 'class' => 'is-warning'];
+        }
+        if ($numericValue > 0) {
+            return ['label' => 'Revisar', 'class' => 'is-review'];
+        }
+        return ['label' => 'OK', 'class' => 'is-ok'];
+    }
+
+    if ($numericValue !== null && str_contains($name, 'silence_ratio')) {
+        if ($numericValue >= 0.45) {
+            return ['label' => 'Revisar', 'class' => 'is-review'];
+        }
+        return ['label' => 'OK', 'class' => 'is-ok'];
+    }
+
+    if ($numericValue !== null && str_contains($name, 'stability')) {
+        if ($numericValue < 0.35) {
+            return ['label' => 'Variable', 'class' => 'is-review'];
+        }
+        return ['label' => 'Estable', 'class' => 'is-ok'];
+    }
+
+    if (is_string($value) && in_array(strtolower($value), ['completed', 'ok', 'available', 'enabled'], true)) {
+        return ['label' => 'OK', 'class' => 'is-ok'];
+    }
+
+    return ['label' => 'Dato', 'class' => 'is-neutral'];
+}
+
+function audioprint_format_metric_value(mixed $value): string
+{
+    if (is_bool($value)) {
+        return $value ? 'Si' : 'No';
+    }
+    if (is_int($value)) {
+        return (string) $value;
+    }
+    if (is_float($value) || is_numeric($value)) {
+        $number = (float) $value;
+        if (abs($number) >= 1000) {
+            return number_format($number, 2, '.', ',');
+        }
+        return rtrim(rtrim(number_format($number, 5, '.', ''), '0'), '.');
+    }
+
+    return is_scalar($value) ? (string) $value : '';
+}
+
+function audioprint_should_skip_metric(array $path, mixed $value): bool
+{
+    $skipSegments = ['image_base64', 'plots', 'raw', 'frame_features'];
+    foreach ($path as $segment) {
+        if (in_array((string) $segment, $skipSegments, true)) {
+            return true;
+        }
+    }
+
+    return is_string($value) && strlen($value) > 240;
+}
+
+function audioprint_build_metric_rows(array $source, array $path = []): array
+{
+    $rows = [];
+    foreach ($source as $key => $value) {
+        $currentPath = [...$path, (string) $key];
+
+        if (is_array($value)) {
+            $rows = [...$rows, ...audioprint_build_metric_rows($value, $currentPath)];
+            continue;
+        }
+
+        if (audioprint_should_skip_metric($currentPath, $value)) {
+            continue;
+        }
+
+        $status = audioprint_metric_status($currentPath, $value);
+        $labelSegments = array_slice($currentPath, -2);
+        $rows[] = [
+            'category' => audioprint_metric_category($currentPath),
+            'metric' => implode(' / ', array_map('audioprint_metric_label', $labelSegments)),
+            'path' => implode('.', $currentPath),
+            'value' => audioprint_format_metric_value($value),
+            'unit' => audioprint_metric_unit($currentPath, $value),
+            'status_label' => $status['label'],
+            'status_class' => $status['class'],
+        ];
+    }
+
+    return $rows;
+}
+
+function audioprint_group_metric_rows(array $rows): array
+{
+    $groups = [];
+    foreach ($rows as $row) {
+        $groups[$row['category']][] = $row;
+    }
+
+    $preferredOrder = ['Calidad de senal', 'Audio y framing', 'Basicas', 'Temporal', 'Espectral', 'Cepstral', 'Tiempo-frecuencia', 'Dashboard', 'General'];
+    uksort($groups, static function (string $left, string $right) use ($preferredOrder): int {
+        $leftIndex = array_search($left, $preferredOrder, true);
+        $rightIndex = array_search($right, $preferredOrder, true);
+        $leftIndex = $leftIndex === false ? PHP_INT_MAX : $leftIndex;
+        $rightIndex = $rightIndex === false ? PHP_INT_MAX : $rightIndex;
+        return $leftIndex <=> $rightIndex ?: strcmp($left, $right);
+    });
+
+    return $groups;
+}
+
 $selectedInsights = is_array($selectedAnalysis) ? audioprint_build_insights($selectedAnalysis) : [];
+$selectedMetricGroups = is_array($selectedAnalysis) ? audioprint_group_metric_rows(audioprint_build_metric_rows($selectedAnalysis)) : [];
 
 $csrfToken = csrf_token();
 render_app_header('Audioprint | Mi espacio');
@@ -449,6 +648,55 @@ render_app_header('Audioprint | Mi espacio');
           <?php endif; ?>
         </div>
       </div>
+
+      <?php if ($selectedMetricGroups !== []): ?>
+        <section class="audioprint-metrics-section">
+          <div class="section-heading">
+            <span class="section-tag">Metricas completas</span>
+            <h3>Tabla tecnica del JSON</h3>
+            <p>Lectura agrupada de las metricas escalares del analisis. Los graficos quedan como vista visual, pero esta tabla conserva el detalle operativo para comparar, auditar y documentar cada audio.</p>
+          </div>
+
+          <div class="audioprint-metric-groups">
+            <?php foreach ($selectedMetricGroups as $category => $rows): ?>
+              <article class="detail-card audioprint-metric-group">
+                <div class="audioprint-metric-group-head">
+                  <strong><?= htmlspecialchars($category, ENT_QUOTES, 'UTF-8') ?></strong>
+                  <span><?= count($rows) ?> metricas</span>
+                </div>
+                <div class="table-shell">
+                  <table class="users-table metrics-table">
+                    <thead>
+                      <tr>
+                        <th>Metrica</th>
+                        <th>Valor</th>
+                        <th>Unidad</th>
+                        <th>Lectura</th>
+                        <th>Ruta JSON</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <?php foreach ($rows as $row): ?>
+                        <tr>
+                          <td><strong><?= htmlspecialchars((string) $row['metric'], ENT_QUOTES, 'UTF-8') ?></strong></td>
+                          <td><?= htmlspecialchars((string) $row['value'], ENT_QUOTES, 'UTF-8') ?></td>
+                          <td><?= htmlspecialchars((string) $row['unit'], ENT_QUOTES, 'UTF-8') ?></td>
+                          <td>
+                            <span class="metric-badge <?= htmlspecialchars((string) $row['status_class'], ENT_QUOTES, 'UTF-8') ?>">
+                              <?= htmlspecialchars((string) $row['status_label'], ENT_QUOTES, 'UTF-8') ?>
+                            </span>
+                          </td>
+                          <td><code><?= htmlspecialchars((string) $row['path'], ENT_QUOTES, 'UTF-8') ?></code></td>
+                        </tr>
+                      <?php endforeach; ?>
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+            <?php endforeach; ?>
+          </div>
+        </section>
+      <?php endif; ?>
     </article>
   <?php endif; ?>
 

@@ -9,7 +9,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
-storage/*
+storage/**
 !storage/.gitkeep
 !storage/**/
 !storage/**/.gitkeep

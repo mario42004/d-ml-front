@@ -154,6 +154,96 @@
   line-height: 1.6;
 }
 
+.audioprint-metrics-section {
+  margin-top: 1.2rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.audioprint-metrics-section h3 {
+  margin: 0.3rem 0 0.45rem;
+  font-size: 1.35rem;
+}
+
+.audioprint-metrics-section p {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+.audioprint-metric-groups {
+  display: grid;
+  gap: 1rem;
+}
+
+.audioprint-metric-group {
+  gap: 0.85rem;
+}
+
+.audioprint-metric-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.audioprint-metric-group-head span {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.metrics-table {
+  min-width: 840px;
+}
+
+.metrics-table td,
+.metrics-table th {
+  vertical-align: top;
+}
+
+.metrics-table code {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.metric-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 0.32rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.metric-badge.is-ok {
+  color: #b8f7cf;
+  background: rgba(56, 189, 116, 0.14);
+  border-color: rgba(56, 189, 116, 0.28);
+}
+
+.metric-badge.is-review {
+  color: #f8dc9a;
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.metric-badge.is-warning {
+  color: #ffc9c9;
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.32);
+}
+
+.metric-badge.is-neutral {
+  color: var(--color-muted);
+  background: rgba(255, 255, 255, 0.05);
+}
+
 @media (max-width: 1080px) {
   .portal-hero,
   .dashboard-hero,

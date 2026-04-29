@@ -96,6 +96,79 @@
   grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
 }
 
+.contact-band {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  margin-top: 1.6rem;
+  margin-bottom: 0;
+  padding: 2.2rem max(1rem, calc((100vw - var(--container)) / 2));
+  border-top: 1px solid rgba(255, 199, 77, 0.16);
+  background:
+    linear-gradient(90deg, rgba(242, 106, 33, 0.13), rgba(255, 199, 77, 0.07) 38%, rgba(255, 255, 255, 0.035));
+}
+
+.contact-band-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(420px, 1.05fr);
+  gap: 1.4rem;
+  align-items: stretch;
+}
+
+.contact-band-copy {
+  display: grid;
+  align-content: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.contact-band-copy h2,
+.contact-band-copy p {
+  margin: 0;
+}
+
+.contact-band-copy h2 {
+  max-width: 16ch;
+  font-size: clamp(1.65rem, 2.7vw, 3rem);
+  line-height: 1.05;
+}
+
+.contact-band-copy p {
+  max-width: 66ch;
+  color: var(--color-muted);
+  font-size: 1rem;
+}
+
+.contact-band-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  gap: 1rem;
+}
+
+.contact-band-panels article {
+  display: grid;
+  align-content: start;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 1.1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 199, 77, 0.16);
+  background: rgba(7, 7, 7, 0.34);
+}
+
+.contact-band-panels h3,
+.contact-band-panels p {
+  margin: 0;
+}
+
+.contact-band-panels h3 {
+  line-height: 1.16;
+}
+
+.contact-band-panels a {
+  color: var(--color-yellow-soft);
+}
+
 .product-rail {
   grid-template-columns: minmax(0, 1fr) minmax(300px, 0.78fr);
 }
@@ -234,6 +307,8 @@
   .workflow-grid,
   .role-showcase,
   .contact-grid,
+  .contact-band-inner,
+  .contact-band-panels,
   .product-rail,
   .metric-strip,
   .cta-product {
@@ -245,6 +320,15 @@
   }
 
   .hero-copy h1 {
+    max-width: 100%;
+  }
+
+  .contact-band {
+    padding-top: 1.7rem;
+    padding-bottom: 1.7rem;
+  }
+
+  .contact-band-copy h2 {
     max-width: 100%;
   }
 }

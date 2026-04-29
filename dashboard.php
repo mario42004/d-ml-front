@@ -23,7 +23,7 @@ render_app_header('d-ml | Mis accesos');
     <div class="dashboard-hero">
       <div>
         <span class="role-badge">Dashboard</span>
-        <h1>Soluciones disponibles para tu cuenta.</h1>
+        <h1>Soluciónes disponibles para tu cuenta.</h1>
         <p class="lead">Cada acceso ve solo las soluciones que tiene habilitadas. Si tu cuenta tiene una sola membresía, entrarás directamente en esa herramienta. Si tiene varias, aquí eliges.</p>
       </div>
       <div class="stats-grid">
@@ -46,7 +46,7 @@ render_app_header('d-ml | Mis accesos');
       <article class="card">
         <span class="tag"><?= htmlspecialchars((string) $membership['role_name'], ENT_QUOTES, 'UTF-8') ?></span>
         <h3><?= htmlspecialchars((string) $membership['product_name'], ENT_QUOTES, 'UTF-8') ?></h3>
-        <p>Acceso habilitado para esta solución con rol <strong><?= htmlspecialchars((string) $membership['role_code'], ENT_QUOTES, 'UTF-8') ?></strong>. Ese rol define lo que puedes operar dentro de la herramienta, mientras que la administración global es un permiso aparte.</p>
+        <p>Acceso habilitado para está solución con rol <strong><?= htmlspecialchars((string) $membership['role_code'], ENT_QUOTES, 'UTF-8') ?></strong>. Ese rol define lo que puedes operar dentro de la herramienta, mientras que la administración global es un permiso aparte.</p>
         <div class="cta-actions">
           <a class="button" href="<?= htmlspecialchars(dashboard_url_for_role((string) $membership['role_code'], (string) $membership['product_code']), ENT_QUOTES, 'UTF-8') ?>">Entrar</a>
         </div>

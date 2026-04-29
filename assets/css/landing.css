@@ -9,40 +9,24 @@
 .hero-aside,
 .service-list-card,
 .product-note {
-  border: 1px solid rgba(255, 199, 77, 0.1);
-  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255,255,255,0.035);
   box-shadow: var(--shadow-soft);
 }
 
 .hero-copy {
   position: relative;
   padding: 2.4rem 2.4rem 2.8rem;
-  border-radius: 36px;
+  border-radius: var(--radius-xl);
   overflow: hidden;
 }
 
 .hero-copy-product::after {
-  content: "";
-  position: absolute;
-  right: -6%;
-  bottom: -18%;
-  width: 280px;
-  height: 280px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, rgba(255, 199, 77, 0.26) 0%, rgba(242, 106, 33, 0.12) 34%, transparent 70%);
-  filter: blur(8px);
-  pointer-events: none;
+  content: none;
 }
 
 .hero-copy::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 82% 18%, rgba(255, 199, 77, 0.16), transparent 18%),
-    linear-gradient(140deg, rgba(242, 106, 33, 0.16), rgba(255, 199, 77, 0.04));
-  pointer-events: none;
+  content: none;
 }
 
 .hero-copy > * {
@@ -51,7 +35,7 @@
 }
 
 .hero-copy h1 {
-  max-width: 10ch;
+  max-width: 15ch;
   margin-top: 0.8rem;
 }
 
@@ -60,7 +44,7 @@
   align-content: start;
   gap: 1rem;
   padding: 1.45rem;
-  border-radius: 28px;
+  border-radius: var(--radius-xl);
   align-self: start;
 }
 
@@ -78,7 +62,8 @@
   display: block;
   margin-bottom: 0.4rem;
   color: var(--color-yellow-soft);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
+  line-height: 1.25;
 }
 
 .section {
@@ -88,7 +73,8 @@
 .metric-strip,
 .workflow-grid,
 .role-showcase,
-.product-rail {
+.product-rail,
+.contact-grid {
   display: grid;
   gap: 1rem;
 }
@@ -104,6 +90,10 @@
 
 .role-showcase {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.contact-grid {
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
 }
 
 .product-rail {
@@ -142,7 +132,7 @@
 
 .service-list-card {
   padding: 1.3rem;
-  border-radius: 28px;
+  border-radius: var(--radius-xl);
 }
 
 .service-list {
@@ -155,29 +145,29 @@
 
 .service-list li {
   position: relative;
-  padding-left: 1rem;
+  padding-left: 1.25rem;
 }
 
 .service-list li::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 0.7rem;
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-orange), var(--color-yellow));
+  top: 0.78rem;
+  width: 0.65rem;
+  height: 2px;
+  border-radius: 0;
+  background: var(--color-yellow);
 }
 
 .product-main,
 .product-note {
   padding: 1.45rem;
-  border-radius: 30px;
+  border-radius: var(--radius-xl);
 }
 
 .role-panel {
   padding: 1.45rem;
-  border-radius: 30px;
+  border-radius: var(--radius-xl);
   border: 1px solid rgba(255, 199, 77, 0.1);
   background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
   box-shadow: var(--shadow-soft);
@@ -189,12 +179,7 @@
 }
 
 .detail-card::after {
-  content: "";
-  position: absolute;
-  inset: auto auto 0 0;
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(242, 106, 33, 0.7), rgba(255, 199, 77, 0.1));
+  content: none;
 }
 
 .cta-shell {
@@ -206,24 +191,28 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 1.2rem;
   align-items: center;
+  padding: 1.25rem 1.45rem;
 }
 
 .cta-product .section-copy {
-  max-width: 62ch;
-  margin-top: 0.9rem;
+  max-width: 56ch;
+  margin-top: 0.45rem;
+}
+
+.cta-product h2 {
+  font-size: clamp(1.4rem, 2vw, 2rem);
+  line-height: 1.16;
 }
 
 .product-main {
-  border: 1px solid rgba(255, 199, 77, 0.12);
-  background:
-    radial-gradient(circle at 88% 16%, rgba(255, 199, 77, 0.14), transparent 18%),
-    linear-gradient(145deg, rgba(242, 106, 33, 0.16), rgba(255, 199, 77, 0.04)),
-    rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
   box-shadow: var(--shadow-soft);
 }
 
 .product-main p,
 .product-note p,
+.contact-grid p,
 .footer-copy p {
   margin: 0;
 }
@@ -244,6 +233,7 @@
   .product-focus,
   .workflow-grid,
   .role-showcase,
+  .contact-grid,
   .product-rail,
   .metric-strip,
   .cta-product {
@@ -252,5 +242,9 @@
 
   .hero-copy {
     padding: 1.6rem 1.45rem 1.9rem;
+  }
+
+  .hero-copy h1 {
+    max-width: 100%;
   }
 }

@@ -12,22 +12,22 @@ render_app_header('d-ml | Portal soporte');
     <div class="portal-hero">
       <div>
         <span class="role-badge">Soporte</span>
-        <h1>Un espacio pensado para cuidar la operacion sin perder contexto.</h1>
-        <p class="lead">Aqui se concentrara el seguimiento de incidencias, el apoyo operativo y la continuidad del flujo cuando algo necesite atencion.</p>
+        <h1>Un espacio pensado para cuidar la operación sin perder contexto.</h1>
+        <p class="lead">Aquí se concentrará el seguimiento de incidencias, el apoyo operativo y la continuidad del flujo cuando algo necesite atención.</p>
       </div>
       <aside class="route-card">
         <strong>Acceso confirmado</strong>
         <code>/portal/soporte.php</code>
-        <p class="route-note">Este entorno esta reservado para el seguimiento tecnico y operativo del sistema.</p>
+        <p class="route-note">Este entorno está reservado para el seguimiento tecnico y operativo del sistema.</p>
       </aside>
     </div>
   </section>
 
   <section class="portal-card-grid">
     <article class="card">
-      <span class="tag">Operacion</span>
+      <span class="tag">Operación</span>
       <h3>Incidencias abiertas</h3>
-      <p>Aqui se reuniran los casos que necesitan revision o apoyo operativo.</p>
+      <p>Aquí se reunirán los casos que necesitan revisión o apoyo operativo.</p>
     </article>
     <article class="card">
       <span class="tag">Pipeline</span>
@@ -37,12 +37,12 @@ render_app_header('d-ml | Portal soporte');
     <article class="card">
       <span class="tag">Diagnostico</span>
       <h3>Logs y estado</h3>
-      <p>Informacion tecnica para entender rapido que esta pasando en el sistema.</p>
+      <p>Informacion tecnica para entender rapido que está pasando en el sistema.</p>
     </article>
     <article class="card">
       <span class="tag">Escalado</span>
-      <h3>Clasificacion tecnica</h3>
-      <p>Una forma mas clara de ordenar incidencias y decidir el siguiente paso.</p>
+      <h3>Clasíficacion tecnica</h3>
+      <p>Una forma más clara de ordenar incidencias y decidir el siguiente paso.</p>
     </article>
   </section>
 </section>

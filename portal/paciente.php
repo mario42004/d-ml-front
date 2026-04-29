@@ -12,13 +12,13 @@ render_app_header('d-ml | Portal paciente');
     <div class="portal-hero">
       <div>
         <span class="role-badge">Paciente</span>
-        <h1>Tu espacio para seguir el estudio con mas claridad.</h1>
-        <p class="lead">Aqui podras consultar el avance del estudio y la informacion que el equipo decida compartir contigo de forma simple y comprensible.</p>
+        <h1>Tu espacio para seguir el estudio con más claridad.</h1>
+        <p class="lead">Aquí podrás consultar el avance del estudio y la información que el equipo decida compartir contigo de forma simple y comprensible.</p>
       </div>
       <aside class="route-card">
         <strong>Acceso confirmado</strong>
         <code>/portal/paciente.php</code>
-        <p class="route-note">Este entorno esta reservado para el seguimiento del estudio y la informacion habilitada para ti.</p>
+        <p class="route-note">Este entorno está reservado para el seguimiento del estudio y la información habilitada para ti.</p>
       </aside>
     </div>
   </section>
@@ -32,12 +32,12 @@ render_app_header('d-ml | Portal paciente');
     <article class="card">
       <span class="tag">Resultados</span>
       <h3>Informacion habilitada</h3>
-      <p>Aqui se mostrara la informacion que el equipo clinico habilite para ti.</p>
+      <p>Aquí se mostrará la información que el equipo clínico habilite para ti.</p>
     </article>
     <article class="card">
       <span class="tag">Mensajes</span>
       <h3>Comunicacion del equipo</h3>
-      <p>Mensajes utiles para mantenerte informado en cada etapa.</p>
+      <p>Mensajes útiles para mantenerte informado en cada etapa.</p>
     </article>
     <article class="card">
       <span class="tag">Historial</span>

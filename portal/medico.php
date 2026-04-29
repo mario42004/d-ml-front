@@ -12,27 +12,27 @@ render_app_header('d-ml | Portal medico');
     <div class="portal-hero">
       <div>
         <span class="role-badge">Medico</span>
-        <h1>Un espacio pensado para revisar cada estudio con mas claridad.</h1>
-        <p class="lead">Aqui se ira reuniendo el trabajo clinico asociado a los estudios, los resultados digitalizados y el seguimiento de cada caso.</p>
+        <h1>Un espacio pensado para revisar cada estudio con más claridad.</h1>
+        <p class="lead">Aquí se irá reuniendo el trabajo clínico asociado a los estudios, los resultados digitalizados y el seguimiento de cada caso.</p>
       </div>
       <aside class="route-card">
         <strong>Acceso confirmado</strong>
         <code>/portal/medico.php</code>
-        <p class="route-note">Este entorno esta reservado para la revision clinica y el seguimiento de informacion medica.</p>
+        <p class="route-note">Este entorno está reservado para la revisión clínica y el seguimiento de información médica.</p>
       </aside>
     </div>
   </section>
 
   <section class="portal-card-grid">
     <article class="card">
-      <span class="tag">Revision</span>
+      <span class="tag">Revisión</span>
       <h3>Estudios pendientes</h3>
-      <p>Aqui apareceran los ECG listos para revision y validacion clinica.</p>
+      <p>Aquí aparecerán los ECG listos para revisión y validación clínica.</p>
     </article>
     <article class="card">
       <span class="tag">Digitalizacion</span>
       <h3>Resultados procesados</h3>
-      <p>Se mostrara la senal digitalizada y la informacion clave del caso.</p>
+      <p>Se mostrará la señal digitalizada y la información clave del caso.</p>
     </article>
     <article class="card">
       <span class="tag">Trazabilidad</span>
@@ -41,8 +41,8 @@ render_app_header('d-ml | Portal medico');
     </article>
     <article class="card">
       <span class="tag">Acciones</span>
-      <h3>Validacion clinica</h3>
-      <p>Espacio para anotar, validar y acompanar cada estudio con criterio clinico.</p>
+      <h3>Validación clínica</h3>
+      <p>Espacio para anotar, validar y acompañar cada estudio con criterio clínico.</p>
     </article>
   </section>
 </section>

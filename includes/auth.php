@@ -233,7 +233,7 @@ function create_user_record(string $firstName, string $lastName, string $email, 
 
     $roles = fetch_roles_for_product_codes($productCode, $roleCodes);
     if (count($roles) !== count(array_unique($roleCodes))) {
-        return ['ok' => false, 'message' => 'Uno o mas roles no son validos para este producto.'];
+        return ['ok' => false, 'message' => 'Uno o más roles no son válidos para este producto.'];
     }
 
     $passwordHash = password_hash($password, PASSWORD_BCRYPT);
@@ -355,7 +355,7 @@ function update_user_status(int $userId, bool $isActive): array
 function admin_update_user_password(int $userId, string $password): array
 {
     if (strlen($password) < 8) {
-        return ['ok' => false, 'message' => 'La contrasena debe tener al menos 8 caracteres.'];
+        return ['ok' => false, 'message' => 'La contraseña debe tener al menos 8 caracteres.'];
     }
 
     $passwordHash = password_hash($password, PASSWORD_BCRYPT);
@@ -380,11 +380,11 @@ function login_attempt(string $email, string $password, ?string $productCode = n
 {
     $user = find_user_by_email($email);
     if ($user === null || !password_verify($password, (string) $user['password_hash'])) {
-        return ['ok' => false, 'message' => 'Credenciales invalidas.'];
+        return ['ok' => false, 'message' => 'Credenciales inválidas.'];
     }
 
     if ((int) $user['is_active'] !== 1) {
-        return ['ok' => false, 'message' => 'La cuenta esta inactiva.'];
+        return ['ok' => false, 'message' => 'La cuenta está inactiva.'];
     }
 
     if (count($user['memberships']) === 0) {

@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $token = $_POST['csrf_token'] ?? null;
 
     if (!verify_csrf(is_string($token) ? $token : null)) {
-        $message = 'La sesion del formulario no es valida. Recarga la pagina e intentalo de nuevo.';
+        $message = 'La sesión del formulario no es válida. Recarga la página e inténtalo de nuevo.';
         $messageType = 'error';
     } else {
         $action = (string) ($_POST['action'] ?? 'upload');
@@ -45,13 +45,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } else {
             $upload = $_FILES['audio_file'] ?? null;
+            $audioDescription = is_string($_POST['audio_description'] ?? null) ? (string) $_POST['audio_description'] : '';
             if (!is_array($upload)) {
                 $message = 'Debes adjuntar un archivo de audio.';
                 $messageType = 'error';
             } else {
-                $result = handle_audioprint_upload((int) $user['id'], $upload);
+                $result = handle_audioprint_upload((int) $user['id'], $upload, $audioDescription);
                 if (($result['ok'] ?? false) === true) {
-                    $message = 'Audio procesado correctamente. Ya puedes revisar el analisis en tu historial.';
+                    $message = 'Audio procesado correctamente. Ya puedes revisar el análisis en tu historial.';
                     $messageType = 'success';
                 } else {
                     $message = (string) ($result['message'] ?? 'No fue posible procesar el audio.');
@@ -84,17 +85,17 @@ $selectedAnalysisId = (int) ($_GET['analysis_id'] ?? 0);
 if ($selectedAnalysisId > 0) {
     $candidateJob = get_audio_job_by_id($selectedAnalysisId);
     if ($candidateJob === null) {
-        $message = 'El analisis solicitado no existe.';
+        $message = 'El análisis solicitado no existe.';
         $messageType = 'error';
     } elseif (!$canAdministerAudioprint && (int) $candidateJob['user_id'] !== (int) $user['id']) {
-        $message = 'No tienes permisos para consultar este analisis.';
+        $message = 'No tienes permisos para consultar este análisis.';
         $messageType = 'error';
     } else {
         $selectedAnalysisJob = audioprint_enrich_job_record($candidateJob);
         $selectedAnalysis = audioprint_load_analysis_for_job($selectedAnalysisJob);
 
         if (!is_array($selectedAnalysis)) {
-            $message = 'Este audio todavia no tiene un analisis disponible.';
+            $message = 'Este audio todavía no tiene un análisis disponible.';
             $messageType = 'error';
             $selectedAnalysisJob = null;
         }
@@ -163,43 +164,132 @@ function audioprint_analysis_number_any(array $source, array $paths): ?float
     return null;
 }
 
+function audioprint_metricas_flatten(array $analysis): array
+{
+    $metricas = $analysis['metricas'] ?? $analysis['metrics'] ?? null;
+    if (!is_array($metricas)) {
+        return [];
+    }
+
+    $groups = $metricas['grupos'] ?? $metricas['groups'] ?? null;
+    if (!is_array($groups)) {
+        return [];
+    }
+
+    $flat = [];
+    foreach ($groups as $group) {
+        if (!is_array($group)) {
+            continue;
+        }
+
+        $rows = $group['metricas'] ?? $group['metrics'] ?? null;
+        if (!is_array($rows)) {
+            continue;
+        }
+
+        foreach ($rows as $metric) {
+            if (!is_array($metric)) {
+                continue;
+            }
+            $key = (string) ($metric['clave'] ?? $metric['key'] ?? '');
+            if ($key === '') {
+                continue;
+            }
+            $flat[$key] = $metric;
+        }
+    }
+
+    return $flat;
+}
+
+function audioprint_metricas_value(array $analysis, string $key, string $fallback = 'n/d'): string
+{
+    $metric = audioprint_metricas_flatten($analysis)[$key] ?? null;
+    if (!is_array($metric) || !array_key_exists('valor', $metric) && !array_key_exists('value', $metric)) {
+        return $fallback;
+    }
+
+    return audioprint_format_metric_value($metric['valor'] ?? $metric['value']);
+}
+
+function audioprint_metricas_number(array $analysis, string $key): ?float
+{
+    $metric = audioprint_metricas_flatten($analysis)[$key] ?? null;
+    if (!is_array($metric) || !array_key_exists('valor', $metric) && !array_key_exists('value', $metric)) {
+        return null;
+    }
+
+    $value = $metric['valor'] ?? $metric['value'];
+    return is_numeric($value) ? (float) $value : null;
+}
+
+function audioprint_metric_card(array $analysis, string $key, string $label, string $help, string $unit = '', string $fallback = 'n/d'): string
+{
+    $value = audioprint_metricas_value($analysis, $key, $fallback);
+    return audioprint_metric_card_value($value, $label, $help, $unit);
+}
+
+function audioprint_metric_card_value(string $value, string $label, string $help, string $unit = ''): string
+{
+    $unitText = $unit !== '' && $value !== 'n/d'
+        ? ' <span class="metric-unit">' . htmlspecialchars($unit, ENT_QUOTES, 'UTF-8') . '</span>'
+        : '';
+
+    return
+        '<article class="feature-card">' .
+        '<strong>' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</strong>' .
+        '<p class="metric-value">' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . $unitText . '</p>' .
+        '<small>' . htmlspecialchars($help, ENT_QUOTES, 'UTF-8') . '</small>' .
+        '</article>';
+}
+
+function audioprint_job_title(array $job): string
+{
+    $description = trim((string) ($job['audio_description'] ?? ''));
+    if ($description !== '') {
+        return $description;
+    }
+
+    return (string) ($job['original_filename'] ?? 'Audio sin descripción');
+}
+
 function audioprint_build_insights(array $analysis): array
 {
     $insights = [];
-    $silenceRatio = audioprint_analysis_number_any($analysis, [
+    $silenceRatio = audioprint_metricas_number($analysis, 'silence_sample_ratio') ?? audioprint_analysis_number_any($analysis, [
         ['analysis_engine', 'quality', 'silence_ratio'],
         ['temporal_analysis', 'silence_ratio'],
     ]);
-    $clippingRatio = audioprint_analysis_number_any($analysis, [
+    $clippingRatio = audioprint_metricas_number($analysis, 'clipping_ratio') ?? audioprint_analysis_number_any($analysis, [
         ['analysis_engine', 'quality', 'clipping_ratio'],
         ['temporal_analysis', 'clipping_ratio'],
     ]);
-    $flatness = audioprint_analysis_number_any($analysis, [
+    $flatness = audioprint_metricas_number($analysis, 'spectral_flatness_mean') ?? audioprint_analysis_number_any($analysis, [
         ['analysis_engine', 'spectral_summary', 'spectral_flatness_mean'],
         ['spectral_analysis', 'flatness', 'mean'],
     ]);
-    $dominantFrequency = audioprint_analysis_number_any($analysis, [
+    $dominantFrequency = audioprint_metricas_number($analysis, 'dominant_frequency_hz') ?? audioprint_analysis_number_any($analysis, [
         ['analysis_engine', 'spectral_summary', 'dominant_frequency'],
         ['spectral_analysis', 'dominant_frequency_hz'],
     ]);
-    $stabilityIndex = audioprint_analysis_number($analysis, ['analysis_engine', 'temporal_summary', 'stability_index']);
+    $stabilityIndex = audioprint_metricas_number($analysis, 'stability_index') ?? audioprint_analysis_number($analysis, ['analysis_engine', 'temporal_summary', 'stability_index']);
 
     if ($silenceRatio !== null) {
         $insights[] = $silenceRatio >= 0.45
-            ? 'El audio contiene bastante silencio o baja energia. Este indicador es util para detectar inactividad o degradacion de captura.'
-            : 'La senal mantiene actividad util durante buena parte del tiempo, lo que favorece comparaciones historicas mas consistentes.';
+            ? 'El audio contiene bastante silencio o baja energía. Este indicador es útil para detectar inactividad o degradación de captura.'
+            : 'La señal mantiene actividad útil durante buena parte del tiempo, lo que favorece comparaciones históricas más consistentes.';
     }
 
     if ($clippingRatio !== null) {
         $insights[] = $clippingRatio > 0
-            ? 'Se observan muestras cercanas al maximo digital, asi que puede haber clipping y cierta distorsion en el analisis.'
-            : 'No aparecen signos relevantes de clipping, por lo que la captura parece estable desde el punto de vista dinamico.';
+            ? 'Se observan muestras cercanas al máximo digital, así que puede haber clipping y cierta distorsión en el análisis.'
+            : 'No aparecen signos relevantes de clipping, por lo que la captura parece estable desde el punto de vista dinámico.';
     }
 
     if ($flatness !== null) {
         $insights[] = $flatness > 0.2
             ? 'La textura espectral es relativamente ancha o ruidosa. Merece la pena vigilar cambios bruscos de flatness a lo largo del tiempo.'
-            : 'La energia esta concentrada en bandas concretas, lo que apunta a un patron mas tonal o mecanico.';
+            : 'La energía está concentrada en bandas concretas, lo que apunta a un patrón más tonal o mecánico.';
     }
 
     if ($dominantFrequency !== null) {
@@ -207,7 +297,7 @@ function audioprint_build_insights(array $analysis): array
     }
 
     if ($stabilityIndex !== null) {
-        $insights[] = 'El indice de estabilidad temporal es ' . round($stabilityIndex, 3) . ', calculado desde frames internos de 5 segundos y agregado al audio completo.';
+        $insights[] = 'El índice de estabilidad temporal es ' . round($stabilityIndex, 3) . ', calculado desde frames internos de 5 segundos y agregado al audio completo.';
     }
 
     return $insights;
@@ -219,7 +309,7 @@ function audioprint_metric_label(string $segment): string
         'analysis_engine' => 'Analysis engine',
         'input_audio' => 'Audio de entrada',
         'global_features' => 'Features globales',
-        'basic_features' => 'Features basicas',
+        'basic_features' => 'Features básicas',
         'temporal_summary' => 'Resumen temporal',
         'spectral_summary' => 'Resumen espectral',
         'cepstral_summary' => 'Resumen cepstral',
@@ -229,9 +319,9 @@ function audioprint_metric_label(string $segment): string
         'framing' => 'Framing',
         'plots' => 'Graficos',
         'audio_metadata' => 'Metadatos de audio',
-        'temporal_analysis' => 'Analisis temporal',
-        'spectral_analysis' => 'Analisis espectral',
-        'autocorrelation_analysis' => 'Autocorrelacion',
+        'temporal_analysis' => 'Análisis temporal',
+        'spectral_analysis' => 'Análisis espectral',
+        'autocorrelation_analysis' => 'Autocorrelación',
     ];
 
     if (isset($labels[$segment])) {
@@ -245,10 +335,10 @@ function audioprint_metric_category(array $path): string
 {
     $joined = implode('.', $path);
     $rules = [
-        'analysis_engine.quality' => 'Calidad de senal',
+        'analysis_engine.quality' => 'Calidad de señal',
         'analysis_engine.input_audio' => 'Audio y framing',
         'analysis_engine.framing' => 'Audio y framing',
-        'analysis_engine.global_features.basic_features' => 'Basicas',
+        'analysis_engine.global_features.basic_features' => 'Básicas',
         'analysis_engine.temporal_summary' => 'Temporal',
         'analysis_engine.spectral_summary' => 'Espectral',
         'analysis_engine.cepstral_summary' => 'Cepstral',
@@ -399,7 +489,7 @@ function audioprint_group_metric_rows(array $rows): array
         $groups[$row['category']][] = $row;
     }
 
-    $preferredOrder = ['Calidad de senal', 'Audio y framing', 'Basicas', 'Temporal', 'Espectral', 'Cepstral', 'Tiempo-frecuencia', 'Dashboard', 'General'];
+    $preferredOrder = ['Calidad de señal', 'Audio y framing', 'Básicas', 'Temporal', 'Espectral', 'Cepstral', 'Tiempo-frecuencia', 'Dashboard', 'General'];
     uksort($groups, static function (string $left, string $right) use ($preferredOrder): int {
         $leftIndex = array_search($left, $preferredOrder, true);
         $rightIndex = array_search($right, $preferredOrder, true);
@@ -413,30 +503,41 @@ function audioprint_group_metric_rows(array $rows): array
 
 function audioprint_canonical_metric_groups(array $analysis): array
 {
-    $metrics = $analysis['metrics'] ?? null;
-    if (!is_array($metrics) || !is_array($metrics['groups'] ?? null)) {
+    $metrics = $analysis['metricas'] ?? $analysis['metrics'] ?? null;
+    if (!is_array($metrics)) {
+        return [];
+    }
+
+    $metricGroups = $metrics['grupos'] ?? $metrics['groups'] ?? null;
+    if (!is_array($metricGroups)) {
         return [];
     }
 
     $groups = [];
-    foreach ($metrics['groups'] as $group) {
-        if (!is_array($group) || !is_array($group['metrics'] ?? null)) {
+    foreach ($metricGroups as $group) {
+        if (!is_array($group)) {
             continue;
         }
 
-        $category = (string) ($group['label'] ?? $group['key'] ?? 'General');
-        foreach ($group['metrics'] as $metric) {
-            if (!is_array($metric) || !array_key_exists('value', $metric)) {
+        $rows = $group['metricas'] ?? $group['metrics'] ?? null;
+        if (!is_array($rows)) {
+            continue;
+        }
+
+        $category = (string) ($group['etiqueta'] ?? $group['label'] ?? $group['clave'] ?? $group['key'] ?? 'General');
+        foreach ($rows as $metric) {
+            if (!is_array($metric) || !array_key_exists('valor', $metric) && !array_key_exists('value', $metric)) {
                 continue;
             }
 
+            $value = $metric['valor'] ?? $metric['value'];
             $groups[$category][] = [
                 'category' => $category,
-                'metric' => (string) ($metric['label'] ?? $metric['key'] ?? 'Metrica'),
-                'path' => (string) ($metric['source'] ?? $metric['key'] ?? ''),
-                'value' => audioprint_format_metric_value($metric['value']),
-                'unit' => (string) ($metric['unit'] ?? ''),
-                'status_label' => (string) ($metric['description'] ?? 'Metrica canonica'),
+                'metric' => (string) ($metric['etiqueta'] ?? $metric['label'] ?? $metric['clave'] ?? $metric['key'] ?? 'Métrica'),
+                'path' => (string) ($metric['fuente'] ?? $metric['source'] ?? $metric['clave'] ?? $metric['key'] ?? ''),
+                'value' => audioprint_format_metric_value($value),
+                'unit' => (string) ($metric['unidad'] ?? $metric['unit'] ?? ''),
+                'status_label' => (string) ($metric['descripcion'] ?? $metric['description'] ?? 'Métrica canónica'),
                 'status_class' => 'is-neutral',
             ];
         }
@@ -467,7 +568,7 @@ function audioprint_output_metrics_csv(array $groups, string $filename): never
     }
 
     fwrite($output, "\xEF\xBB\xBF");
-    fputcsv($output, ['categoria', 'metrica', 'valor', 'unidad', 'descripcion', 'fuente']);
+    fputcsv($output, ['categoría', 'métrica', 'valor', 'unidad', 'descripción', 'fuente']);
     foreach ($groups as $category => $rows) {
         foreach ($rows as $row) {
             fputcsv($output, [
@@ -485,8 +586,70 @@ function audioprint_output_metrics_csv(array $groups, string $filename): never
     exit;
 }
 
+function audioprint_output_metric_table_csv(array $rows, string $filename): never
+{
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+
+    $output = fopen('php://output', 'wb');
+    if ($output === false) {
+        exit;
+    }
+
+    fwrite($output, "\xEF\xBB\xBF");
+    $baseColumns = [
+        'analysis_id',
+        'audio_job_id',
+        'descripcion_audio',
+        'archivo_audio',
+        'audio_creado_en',
+        'audio_procesado_en',
+        'captured_at',
+        'estado_audio',
+        'mime_type',
+        'audio_size_bytes',
+        'user_id',
+        'user_email',
+        'usuario',
+    ];
+    $featureColumns = audioprint_feature_export_columns($rows);
+    fputcsv($output, [...$baseColumns, ...$featureColumns]);
+
+    foreach ($rows as $row) {
+        $features = audioprint_decode_json_object($row['features_json'] ?? null);
+        $csvRow = [
+            $row['audio_job_id'] ?? '',
+            $row['audio_job_id'] ?? '',
+            $row['audio_description'] ?? '',
+            $row['original_filename'] ?? '',
+            $row['job_created_at'] ?? '',
+            $row['job_processed_at'] ?? '',
+            $row['captured_at'] ?? '',
+            $row['job_status'] ?? '',
+            $row['mime_type'] ?? '',
+            $row['audio_size_bytes'] ?? '',
+            $row['user_id'] ?? '',
+            $row['user_email'] ?? '',
+            trim((string) ($row['first_name'] ?? '') . ' ' . (string) ($row['last_name'] ?? '')),
+        ];
+
+        foreach ($featureColumns as $featureKey) {
+            $csvRow[] = $features[$featureKey] ?? '';
+        }
+
+        fputcsv($output, $csvRow);
+    }
+
+    fclose($output);
+    exit;
+}
+
 $selectedInsights = is_array($selectedAnalysis) ? audioprint_build_insights($selectedAnalysis) : [];
-$selectedMetricGroups = is_array($selectedAnalysis) ? audioprint_metric_groups_for_csv($selectedAnalysis) : [];
+$selectedPersistedMetricRows = $selectedAnalysisJob !== null ? list_audio_job_metrics((int) $selectedAnalysisJob['id']) : [];
+$selectedMetricGroups = $selectedPersistedMetricRows !== []
+    ? audioprint_metric_groups_from_persisted_rows($selectedPersistedMetricRows)
+    : (is_array($selectedAnalysis) ? audioprint_metric_groups_for_csv($selectedAnalysis) : []);
 
 if (
     $selectedAnalysisJob !== null
@@ -497,6 +660,15 @@ if (
     audioprint_output_metrics_csv($selectedMetricGroups, $csvName);
 }
 
+if ((string) ($_GET['download'] ?? '') === 'metrics_table_csv') {
+    $exportAll = $canAdministerAudioprint;
+    $metricRows = list_audio_job_feature_export_rows($exportAll ? null : (int) $user['id']);
+    $csvName = $exportAll
+        ? 'audioprint_metricas_todos_los_usuarios.csv'
+        : 'audioprint_metricas_usuario_' . (int) $user['id'] . '.csv';
+    audioprint_output_metric_table_csv($metricRows, $csvName);
+}
+
 $csrfToken = csrf_token();
 render_app_header('Audioprint | Mi espacio');
 ?>
@@ -505,8 +677,8 @@ render_app_header('Audioprint | Mi espacio');
     <div class="portal-hero">
       <div>
         <span class="role-badge">Audioprint</span>
-        <h1>Sube tu audio y guarda cada analisis con trazabilidad.</h1>
-        <p class="lead">Este espacio reune tu flujo completo: subida del archivo, generacion del analisis temporal y espectral, y acceso posterior a tu historial. Tu rol actual en el producto es <strong><?= htmlspecialchars($currentRole, ENT_QUOTES, 'UTF-8') ?></strong>.</p>
+        <h1>Sube tu audio y guarda cada análisis con trazabilidad.</h1>
+        <p class="lead">Este espacio reúne tu flujo completo: subida del archivo, generación del análisis temporal y espectral, y acceso posterior a tu historial. Tu rol actual en el producto es <strong><?= htmlspecialchars($currentRole, ENT_QUOTES, 'UTF-8') ?></strong>.</p>
       </div>
       <div class="stats-grid">
         <article class="stat-card">
@@ -515,15 +687,20 @@ render_app_header('Audioprint | Mi espacio');
         </article>
         <article class="stat-card">
           <strong><?= $completedJobs ?></strong>
-          <span>Analisis listos</span>
+          <span>Análisis listos</span>
         </article>
+      </div>
+      <div class="table-actions">
+        <a class="button" href="/portal/audioprint.php?download=metrics_table_csv">
+          <?= $canAdministerAudioprint ? 'Descargar features de todos los usuarios' : 'Descargar features de todos mis audios' ?>
+        </a>
       </div>
     </div>
   </section>
 
   <?php if ($message !== null): ?>
     <div class="message <?= $messageType === 'error' ? 'is-error' : 'is-success' ?>">
-      <strong><?= $messageType === 'error' ? 'Revision necesaria' : 'Proceso completado' ?></strong>
+      <strong><?= $messageType === 'error' ? 'Revisión necesaria' : 'Proceso completado' ?></strong>
       <span><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></span>
     </div>
   <?php endif; ?>
@@ -531,8 +708,8 @@ render_app_header('Audioprint | Mi espacio');
   <section class="panel-grid">
     <article class="card">
       <span class="section-tag">Nuevo audio</span>
-      <h2>Generar analisis</h2>
-      <p>Sube un archivo de audio y Audioprint lo enviara a la API para devolverte una visual principal, metricas temporales y espectrales, y un analisis reutilizable.</p>
+      <h2>Generar análisis</h2>
+      <p>Sube un archivo de audio y Audioprint lo enviará a la API para devolverte una visual principal, métricas temporales y espectrales, y un análisis reutilizable.</p>
 
       <form method="post" action="/portal/audioprint.php" class="form-block" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
@@ -541,12 +718,17 @@ render_app_header('Audioprint | Mi espacio');
           <label for="audio_file">Archivo de audio</label>
           <input id="audio_file" name="audio_file" type="file" accept=".wav,.mp3,.flac,.ogg,.m4a,audio/*" required>
         </div>
+        <div>
+          <label for="audio_description">Descripción del audio</label>
+          <input id="audio_description" name="audio_description" type="text" maxlength="50" required placeholder="Ej. Motor bomba turno mañana">
+          <small class="field-help">Máximo 50 caracteres. Se mostrará en el dashboard y la autocorrelación.</small>
+        </div>
         <button class="button" type="submit">Subir y generar</button>
       </form>
 
       <div class="helper">
-        <strong>Que ocurre al subir</strong>
-        <span>El sistema guarda el audio, llama a la API, conserva la imagen principal y el JSON completo del analisis, y deja ambos artefactos enlazados a tu historial dentro del producto.</span>
+        <strong>Qué ocurre al subir</strong>
+        <span>El sistema guarda el audio, llama a la API, conserva la imagen principal y el JSON completo del análisis, y deja ambos artefactos enlazados a tu historial dentro del producto.</span>
       </div>
     </article>
   </section>
@@ -560,8 +742,8 @@ render_app_header('Audioprint | Mi espacio');
   <?php if ($availableTrendSeries !== []): ?>
     <article class="card">
       <span class="section-tag">Tendencias</span>
-      <h2>Evolucion de tus metricas clave</h2>
-      <p>Estos graficos usan la fecha y hora de cada subida en el eje X y las metricas principales en el eje Y. Te sirven para detectar desplazamientos de comportamiento a medida que acumulas audios en Audioprint.</p>
+      <h2>Evolución de tus métricas clave</h2>
+      <p>Cada punto representa un audio procesado. El eje X es la fecha del análisis y el eje Y muestra el valor de la métrica indicada.</p>
 
       <div class="audioprint-trend-grid">
         <?php foreach ($availableTrendSeries as $series): ?>
@@ -571,11 +753,12 @@ render_app_header('Audioprint | Mi espacio');
             $latestValueText = rtrim(rtrim(number_format($latestValue, 3, '.', ''), '0'), '.');
           ?>
           <article class="detail-card">
-            <strong><?= htmlspecialchars((string) ($series['label'] ?? 'Metrica'), ENT_QUOTES, 'UTF-8') ?></strong>
+            <strong><?= htmlspecialchars((string) ($series['label'] ?? 'Métrica'), ENT_QUOTES, 'UTF-8') ?></strong>
             <p><?= htmlspecialchars((string) ($series['description'] ?? ''), ENT_QUOTES, 'UTF-8') ?></p>
+            <p class="chart-help">Cada punto es un audio. X: fecha/hora. Y: <?= htmlspecialchars((string) ($series['axis_label'] ?? $series['unit'] ?? 'valor'), ENT_QUOTES, 'UTF-8') ?>.</p>
             <div class="audioprint-trend-meta">
               <span><?= count($series['points']) ?> mediciones</span>
-              <span>Ultimo valor: <?= htmlspecialchars($latestValueText, ENT_QUOTES, 'UTF-8') ?><?= !empty($series['unit']) ? ' ' . htmlspecialchars((string) $series['unit'], ENT_QUOTES, 'UTF-8') : '' ?></span>
+              <span>Último valor: <?= htmlspecialchars($latestValueText, ENT_QUOTES, 'UTF-8') ?><?= !empty($series['unit']) ? ' ' . htmlspecialchars((string) $series['unit'], ENT_QUOTES, 'UTF-8') : '' ?></span>
             </div>
             <?= audioprint_render_trend_chart($series) ?>
           </article>
@@ -590,21 +773,23 @@ render_app_header('Audioprint | Mi espacio');
       $plots = is_array($selectedAnalysis['plots'] ?? null) ? $selectedAnalysis['plots'] : [];
       $primaryPlot = is_array($plots[$primaryKey] ?? null) ? $plots[$primaryKey] : null;
       $autocorrelationPlot = is_array($plots['autocorrelation'] ?? null) ? $plots['autocorrelation'] : null;
+      $selectedAudioTitle = audioprint_job_title($selectedAnalysisJob);
     ?>
     <article class="card" id="analysis-detail">
-      <span class="section-tag">Analisis</span>
-      <h2>Detalle del audio seleccionado</h2>
-      <p>Este bloque se abre bajo demanda desde el historial. Cada audio conserva su visual principal, autocorrelacion y metricas descargables.</p>
+      <span class="section-tag">Análisis</span>
+      <h2><?= htmlspecialchars($selectedAudioTitle, ENT_QUOTES, 'UTF-8') ?></h2>
+      <p>Este bloque se abre bajo demanda desde el historial. Cada audio conserva su visual principal, autocorrelación y métricas descargables.</p>
 
       <div class="audioprint-analysis-grid">
         <div class="stack">
           <article class="detail-card audioprint-spotlight">
-            <strong><?= htmlspecialchars((string) ($primaryPlot['title'] ?? 'Visual principal'), ENT_QUOTES, 'UTF-8') ?></strong>
-            <p><?= htmlspecialchars((string) ($primaryPlot['description'] ?? 'Resumen visual del ultimo analisis.'), ENT_QUOTES, 'UTF-8') ?></p>
+            <strong>Dashboard: <?= htmlspecialchars($selectedAudioTitle, ENT_QUOTES, 'UTF-8') ?></strong>
+            <div class="table-meta"><?= htmlspecialchars((string) ($selectedAnalysisJob['original_filename'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
+            <p><?= htmlspecialchars((string) ($primaryPlot['description'] ?? 'Resumen visual del último análisis.'), ENT_QUOTES, 'UTF-8') ?></p>
             <?php if (is_array($primaryPlot) && !empty($primaryPlot['image_base64'])): ?>
               <img class="audioprint-image" src="data:image/png;base64,<?= htmlspecialchars((string) $primaryPlot['image_base64'], ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) ($primaryPlot['title'] ?? 'Visual principal'), ENT_QUOTES, 'UTF-8') ?>">
             <?php elseif (!empty($selectedAnalysisJob['scalogram_url'])): ?>
-              <img class="audioprint-image" src="<?= htmlspecialchars((string) $selectedAnalysisJob['scalogram_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Visual principal del analisis">
+              <img class="audioprint-image" src="<?= htmlspecialchars((string) $selectedAnalysisJob['scalogram_url'], ENT_QUOTES, 'UTF-8') ?>" alt="Visual principal del análisis">
             <?php endif; ?>
             <div class="table-actions">
               <a class="button-secondary" href="<?= htmlspecialchars((string) $selectedAnalysisJob['audio_url'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noreferrer">Abrir audio</a>
@@ -614,104 +799,82 @@ render_app_header('Audioprint | Mi espacio');
               <?php if ($selectedMetricGroups !== []): ?>
                 <a class="button-secondary" href="/portal/audioprint.php?analysis_id=<?= (int) $selectedAnalysisJob['id'] ?>&download=metrics_csv">Descargar métricas CSV</a>
               <?php endif; ?>
-              <a class="button-secondary" href="/portal/audioprint.php">Cerrar analisis</a>
+              <a class="button-secondary" href="/portal/audioprint.php">Cerrar análisis</a>
             </div>
           </article>
-        </div>
-
-        <div class="stack">
-          <div class="audioprint-summary-grid">
-            <article class="feature-card">
-              <strong>Frecuencia efectiva</strong>
-              <p><?= htmlspecialchars(audioprint_analysis_value_any($selectedAnalysis, [
-                  ['analysis_engine', 'input_audio', 'internal_sample_rate'],
-                  ['audio_metadata', 'sample_rate'],
-              ]), ENT_QUOTES, 'UTF-8') ?> Hz</p>
-            </article>
-            <article class="feature-card">
-              <strong>Duracion</strong>
-              <p><?= htmlspecialchars(audioprint_analysis_value_any($selectedAnalysis, [
-                  ['analysis_engine', 'input_audio', 'duration_seconds'],
-                  ['audio_metadata', 'duration_seconds'],
-              ]), ENT_QUOTES, 'UTF-8') ?> s</p>
-            </article>
-            <article class="feature-card">
-              <strong>Frecuencia dominante</strong>
-              <p><?= htmlspecialchars(audioprint_analysis_value_any($selectedAnalysis, [
-                  ['analysis_engine', 'spectral_summary', 'dominant_frequency'],
-                  ['spectral_analysis', 'dominant_frequency_hz'],
-              ]), ENT_QUOTES, 'UTF-8') ?> Hz</p>
-            </article>
-            <article class="feature-card">
-              <strong>Rango dinamico</strong>
-              <p><?= htmlspecialchars(audioprint_analysis_value_any($selectedAnalysis, [
-                  ['analysis_engine', 'global_features', 'basic_features', 'dynamic_range_db'],
-                  ['temporal_analysis', 'dynamic_range_db'],
-              ]), ENT_QUOTES, 'UTF-8') ?> dB</p>
-            </article>
-            <article class="feature-card">
-              <strong>Silencio</strong>
-              <p><?= htmlspecialchars(audioprint_analysis_value_any($selectedAnalysis, [
-                  ['analysis_engine', 'quality', 'silence_ratio'],
-                  ['temporal_analysis', 'silence_ratio'],
-              ]), ENT_QUOTES, 'UTF-8') ?></p>
-            </article>
-            <article class="feature-card">
-              <strong>Flatness</strong>
-              <p><?= htmlspecialchars(audioprint_analysis_value_any($selectedAnalysis, [
-                  ['analysis_engine', 'spectral_summary', 'spectral_flatness_mean'],
-                  ['spectral_analysis', 'flatness', 'mean'],
-              ]), ENT_QUOTES, 'UTF-8') ?></p>
-            </article>
-            <article class="feature-card">
-              <strong>Estabilidad temporal</strong>
-              <p><?= htmlspecialchars(audioprint_analysis_value_any($selectedAnalysis, [
-                  ['analysis_engine', 'temporal_summary', 'stability_index'],
-              ]), ENT_QUOTES, 'UTF-8') ?></p>
-            </article>
-            <article class="feature-card">
-              <strong>MFCC 1 medio</strong>
-              <p><?= htmlspecialchars(audioprint_analysis_value_any($selectedAnalysis, [
-                  ['analysis_engine', 'dashboard_ready', 'summary', 'mfcc_1_mean'],
-              ]), ENT_QUOTES, 'UTF-8') ?></p>
-            </article>
-            <article class="feature-card">
-              <strong>Energia low/mid/high</strong>
-              <p>
-                <?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['analysis_engine', 'spectral_summary', 'energy_bands', 'low']), ENT_QUOTES, 'UTF-8') ?>
-                /
-                <?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['analysis_engine', 'spectral_summary', 'energy_bands', 'mid']), ENT_QUOTES, 'UTF-8') ?>
-                /
-                <?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['analysis_engine', 'spectral_summary', 'energy_bands', 'high']), ENT_QUOTES, 'UTF-8') ?>
-              </p>
-            </article>
-            <article class="feature-card">
-              <strong>Tiempo-frecuencia</strong>
-              <p><?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['analysis_engine', 'time_frequency_summary', 'status']), ENT_QUOTES, 'UTF-8') ?></p>
-            </article>
-            <article class="feature-card">
-              <strong>Distancia entre picos</strong>
-              <p><?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'peak_distance_seconds']), ENT_QUOTES, 'UTF-8') ?> s</p>
-            </article>
-            <article class="feature-card">
-              <strong>Picos autocorrelacion</strong>
-              <p><?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'peak_count']), ENT_QUOTES, 'UTF-8') ?></p>
-            </article>
-          </div>
 
           <?php if (is_array($autocorrelationPlot) && !empty($autocorrelationPlot['image_base64'])): ?>
             <article class="detail-card">
-              <strong><?= htmlspecialchars((string) ($autocorrelationPlot['title'] ?? 'Autocorrelation'), ENT_QUOTES, 'UTF-8') ?></strong>
-              <p><?= htmlspecialchars((string) ($autocorrelationPlot['description'] ?? 'Grafica de autocorrelacion del audio seleccionado.'), ENT_QUOTES, 'UTF-8') ?></p>
+              <strong>Autocorrelación: <?= htmlspecialchars($selectedAudioTitle, ENT_QUOTES, 'UTF-8') ?></strong>
+              <div class="table-meta"><?= htmlspecialchars((string) ($selectedAnalysisJob['original_filename'] ?? ''), ENT_QUOTES, 'UTF-8') ?></div>
+              <p><?= htmlspecialchars((string) ($autocorrelationPlot['description'] ?? 'Gráfica de autocorrelación del audio seleccionado.'), ENT_QUOTES, 'UTF-8') ?></p>
               <div class="audioprint-peak-grid">
-                <span>Primer pico: <?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'strongest_peak_lag_seconds']), ENT_QUOTES, 'UTF-8') ?> s</span>
-                <span>Segundo pico: <?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'second_peak_lag_seconds']), ENT_QUOTES, 'UTF-8') ?> s</span>
-                <span>Distancia: <?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'peak_distance_seconds']), ENT_QUOTES, 'UTF-8') ?> s</span>
-                <span>Muestras: <?= htmlspecialchars(audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'peak_distance_samples']), ENT_QUOTES, 'UTF-8') ?></span>
+                <span>Primer pico: <?= htmlspecialchars(audioprint_metricas_value($selectedAnalysis, 'strongest_peak_lag_seconds', audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'strongest_peak_lag_seconds'])), ENT_QUOTES, 'UTF-8') ?> s</span>
+                <span>Segundo pico: <?= htmlspecialchars(audioprint_metricas_value($selectedAnalysis, 'second_peak_lag_seconds', audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'second_peak_lag_seconds'])), ENT_QUOTES, 'UTF-8') ?> s</span>
+                <span>Distancia: <?= htmlspecialchars(audioprint_metricas_value($selectedAnalysis, 'peak_distance_seconds', audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'peak_distance_seconds'])), ENT_QUOTES, 'UTF-8') ?> s</span>
+                <span>Muestras: <?= htmlspecialchars(audioprint_metricas_value($selectedAnalysis, 'peak_distance_samples', audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'peak_distance_samples'])), ENT_QUOTES, 'UTF-8') ?></span>
               </div>
               <img class="audioprint-image" src="data:image/png;base64,<?= htmlspecialchars((string) $autocorrelationPlot['image_base64'], ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars((string) ($autocorrelationPlot['title'] ?? 'Autocorrelation'), ENT_QUOTES, 'UTF-8') ?>">
             </article>
           <?php endif; ?>
+        </div>
+
+        <div class="stack">
+          <div class="audioprint-summary-grid">
+            <?= audioprint_metric_card($selectedAnalysis, 'snr_estimate', 'SNR estimado', 'SNR estimado.', 'dB') ?>
+            <?= audioprint_metric_card($selectedAnalysis, 'active_ratio', 'Actividad', 'Proporción del audio con señal activa.', 'ratio') ?>
+            <?= audioprint_metric_card_value(
+                audioprint_metricas_value($selectedAnalysis, 'dominant_frequency_hz', audioprint_analysis_value_any($selectedAnalysis, [
+                    ['analysis_engine', 'spectral_summary', 'dominant_frequency'],
+                    ['spectral_analysis', 'dominant_frequency_hz'],
+                ])),
+                'Frecuencia dominante',
+                'Frecuencia con mayor presencia.',
+                'Hz'
+            ) ?>
+            <?= audioprint_metric_card_value(
+                audioprint_metricas_value($selectedAnalysis, 'dynamic_range_db', audioprint_analysis_value_any($selectedAnalysis, [
+                    ['analysis_engine', 'global_features', 'basic_features', 'dynamic_range_db'],
+                    ['temporal_analysis', 'dynamic_range_db'],
+                ])),
+                'Rango dinámico',
+                'Diferencia entre niveles bajos y altos.',
+                'dB'
+            ) ?>
+            <?= audioprint_metric_card($selectedAnalysis, 'silence_sample_ratio', 'Silencio', 'Proporción detectada como silencio.', 'ratio') ?>
+            <?= audioprint_metric_card($selectedAnalysis, 'spectral_flatness_mean', 'Flatness espectral', 'Qué tan plano es el espectro.', 'índice') ?>
+            <?= audioprint_metric_card($selectedAnalysis, 'stability_index', 'Estabilidad temporal', 'Sirve para comparar cambios entre capturas.', 'valor') ?>
+            <?= audioprint_metric_card_value(
+                audioprint_metricas_value($selectedAnalysis, 'mfcc_0_mean', audioprint_analysis_value_any($selectedAnalysis, [
+                    ['analysis_engine', 'dashboard_ready', 'summary', 'mfcc_1_mean'],
+                ])),
+                'MFCC 0 medio',
+                'Resumen cepstral para comparar timbre.',
+                'coef.'
+            ) ?>
+            <?= audioprint_metric_card_value(
+                audioprint_metricas_value($selectedAnalysis, 'low_band_energy_ratio', audioprint_analysis_value($selectedAnalysis, ['analysis_engine', 'spectral_summary', 'energy_bands', 'low'])) .
+                    ' / ' .
+                    audioprint_metricas_value($selectedAnalysis, 'mid_band_energy_ratio', audioprint_analysis_value($selectedAnalysis, ['analysis_engine', 'spectral_summary', 'energy_bands', 'mid'])) .
+                    ' / ' .
+                    audioprint_metricas_value($selectedAnalysis, 'high_band_energy_ratio', audioprint_analysis_value($selectedAnalysis, ['analysis_engine', 'spectral_summary', 'energy_bands', 'high'])),
+                'Energía baja/media/alta',
+                'Reparto de energía por bandas.',
+                'ratio'
+            ) ?>
+            <?= audioprint_metric_card($selectedAnalysis, 'time_frequency_status', 'Tiempo-frecuencia', 'Estado del módulo, no valor físico.') ?>
+            <?= audioprint_metric_card_value(
+                audioprint_metricas_value($selectedAnalysis, 'peak_distance_seconds', audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'peak_distance_seconds'])),
+                'Distancia entre picos',
+                'Separación temporal entre picos.',
+                's'
+            ) ?>
+            <?= audioprint_metric_card_value(
+                audioprint_metricas_value($selectedAnalysis, 'autocorrelation_peak_count', audioprint_analysis_value($selectedAnalysis, ['autocorrelation_analysis', 'peak_count'])),
+                'Picos autocorrelación',
+                'Cantidad de picos detectados.'
+            ) ?>
+          </div>
         </div>
       </div>
     </article>
@@ -720,7 +883,12 @@ render_app_header('Audioprint | Mi espacio');
   <article class="card">
     <span class="section-tag">Historial</span>
     <h2>Tus audios y resultados</h2>
-    <p>Todo lo que subes queda registrado con fecha, estado, enlace al audio, visual principal y JSON del analisis cuando el proceso ha finalizado. En esta tabla solo trabajas sobre tus propios audios.</p>
+    <p>Todo lo que subes queda registrado con fecha, estado, enlace al audio, visual principal y JSON del análisis cuando el proceso ha finalizado. En esta tabla solo trabajas sobre tus propios audios.</p>
+    <div class="table-actions">
+      <a class="button-secondary" href="/portal/audioprint.php?download=metrics_table_csv">
+        <?= $canAdministerAudioprint ? 'Descargar features de todos los usuarios' : 'Descargar features de todos mis audios' ?>
+      </a>
+    </div>
 
     <div class="table-shell">
       <table class="users-table">
@@ -737,7 +905,10 @@ render_app_header('Audioprint | Mi espacio');
           <?php foreach ($jobs as $job): ?>
             <tr>
               <td>
-                <strong><?= htmlspecialchars($job['original_filename'], ENT_QUOTES, 'UTF-8') ?></strong>
+                <strong><?= htmlspecialchars(audioprint_job_title($job), ENT_QUOTES, 'UTF-8') ?></strong>
+                <?php if (!empty($job['audio_description'])): ?>
+                  <div class="table-meta"><?= htmlspecialchars((string) $job['original_filename'], ENT_QUOTES, 'UTF-8') ?></div>
+                <?php endif; ?>
                 <div class="table-meta"><?= htmlspecialchars((string) ($job['mime_type'] ?? 'audio'), ENT_QUOTES, 'UTF-8') ?></div>
               </td>
               <td>
@@ -758,12 +929,12 @@ render_app_header('Audioprint | Mi espacio');
                     <a class="button" href="<?= htmlspecialchars((string) $job['scalogram_url'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noreferrer">Ver imagen</a>
                   <?php endif; ?>
                   <?php if (!empty($job['analysis_available']) && !empty($job['analysis_url'])): ?>
-                    <a class="button-secondary" href="/portal/audioprint.php?analysis_id=<?= (int) $job['id'] ?>#analysis-detail">Analisis</a>
+                    <a class="button-secondary" href="/portal/audioprint.php?analysis_id=<?= (int) $job['id'] ?>#analysis-detail">Análisis</a>
                   <?php endif; ?>
                   <?php if (empty($job['scalogram_url']) && empty($job['analysis_available'])): ?>
                     <span class="muted">Pendiente</span>
                   <?php endif; ?>
-                  <form method="post" action="/portal/audioprint.php" class="inline-form" onsubmit="return confirm('¿Estas seguro de que deseas eliminar este audio y su analisis asociado?');">
+                  <form method="post" action="/portal/audioprint.php" class="inline-form" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este audio y su análisis asociado?');">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                     <input type="hidden" name="action" value="delete_job">
                     <input type="hidden" name="job_id" value="<?= (int) $job['id'] ?>">
@@ -780,9 +951,9 @@ render_app_header('Audioprint | Mi espacio');
 
   <?php if ($canAdministerAudioprint): ?>
     <article class="card">
-      <span class="section-tag">Administracion de producto</span>
+      <span class="section-tag">Administración de producto</span>
       <h2>Historial global de Audioprint</h2>
-      <p>Como admin de Audioprint puedes supervisar la operacion del producto y eliminar registros de cualquier usuario sin entrar al panel global. El admin global mantiene aparte la gestion transversal del sistema.</p>
+      <p>Como admin de Audioprint puedes supervisar la operación del producto y eliminar registros de cualquier usuario sin entrar al panel global. El admin global mantiene aparte la gestión transversal del sistema.</p>
 
       <div class="table-shell">
         <table class="users-table">
@@ -802,7 +973,12 @@ render_app_header('Audioprint | Mi espacio');
                   <strong><?= htmlspecialchars(trim($job['first_name'] . ' ' . $job['last_name']), ENT_QUOTES, 'UTF-8') ?></strong>
                   <div class="table-meta"><?= htmlspecialchars((string) $job['email'], ENT_QUOTES, 'UTF-8') ?></div>
                 </td>
-                <td><?= htmlspecialchars((string) $job['original_filename'], ENT_QUOTES, 'UTF-8') ?></td>
+                <td>
+                  <strong><?= htmlspecialchars(audioprint_job_title($job), ENT_QUOTES, 'UTF-8') ?></strong>
+                  <?php if (!empty($job['audio_description'])): ?>
+                    <div class="table-meta"><?= htmlspecialchars((string) $job['original_filename'], ENT_QUOTES, 'UTF-8') ?></div>
+                  <?php endif; ?>
+                </td>
                 <td>
                   <span class="status-pill <?= ($job['status'] ?? '') === 'completed' ? 'is-active' : 'is-inactive' ?>">
                     <?= htmlspecialchars((string) $job['status'], ENT_QUOTES, 'UTF-8') ?>
@@ -815,9 +991,9 @@ render_app_header('Audioprint | Mi espacio');
                       <a class="button-secondary" href="<?= htmlspecialchars((string) $job['scalogram_url'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noreferrer">Ver imagen</a>
                     <?php endif; ?>
                     <?php if (!empty($job['analysis_available']) && !empty($job['analysis_url'])): ?>
-                      <a class="button-secondary" href="/portal/audioprint.php?analysis_id=<?= (int) $job['id'] ?>#analysis-detail">Analisis</a>
+                      <a class="button-secondary" href="/portal/audioprint.php?analysis_id=<?= (int) $job['id'] ?>#analysis-detail">Análisis</a>
                     <?php endif; ?>
-                    <form method="post" action="/portal/audioprint.php" class="inline-form" onsubmit="return confirm('¿Estas seguro de que deseas eliminar este audio y su analisis asociado?');">
+                    <form method="post" action="/portal/audioprint.php" class="inline-form" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este audio y su análisis asociado?');">
                       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                       <input type="hidden" name="action" value="delete_job">
                       <input type="hidden" name="job_id" value="<?= (int) $job['id'] ?>">

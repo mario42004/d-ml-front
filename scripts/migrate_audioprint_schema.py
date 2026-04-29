@@ -35,8 +35,16 @@ def execute(cur, sql: str) -> None:
     cur.execute(sql)
 
 
+def execute_sql_file(cur, path: Path) -> None:
+    for statement in path.read_text().split(";"):
+        statement = statement.strip()
+        if statement:
+            cur.execute(statement)
+
+
 def main() -> None:
-    env = load_env(Path(__file__).resolve().parents[1] / ".env")
+    project_root = Path(__file__).resolve().parents[1]
+    env = load_env(project_root / ".env")
     schema = env["DB_NAME"]
 
     connection = pymysql.connect(
@@ -127,6 +135,7 @@ def main() -> None:
                   user_id BIGINT UNSIGNED NOT NULL,
                   product_id BIGINT UNSIGNED NOT NULL,
                   original_filename VARCHAR(255) NOT NULL,
+                  audio_description VARCHAR(50) NOT NULL DEFAULT '',
                   mime_type VARCHAR(120) NULL,
                   audio_size_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
                   audio_path VARCHAR(255) NOT NULL,
@@ -147,6 +156,72 @@ def main() -> None:
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 """,
             )
+
+            cur.execute("SHOW COLUMNS FROM audio_jobs LIKE 'audio_description'")
+            if cur.fetchone() is None:
+                execute(
+                    cur,
+                    "ALTER TABLE audio_jobs ADD COLUMN audio_description VARCHAR(50) NOT NULL DEFAULT '' AFTER original_filename",
+                )
+
+            execute(
+                cur,
+                """
+                CREATE TABLE IF NOT EXISTS audio_job_metrics (
+                  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                  audio_job_id BIGINT UNSIGNED NOT NULL,
+                  user_id BIGINT UNSIGNED NOT NULL,
+                  product_id BIGINT UNSIGNED NOT NULL,
+                  metric_group_key VARCHAR(80) NOT NULL,
+                  metric_group_label VARCHAR(160) NOT NULL,
+                  metric_key VARCHAR(120) NOT NULL,
+                  metric_label VARCHAR(190) NOT NULL,
+                  metric_value_text TEXT NULL,
+                  metric_value_number DOUBLE NULL,
+                  unit VARCHAR(40) NOT NULL DEFAULT '',
+                  source_path VARCHAR(255) NOT NULL DEFAULT '',
+                  description TEXT NULL,
+                  captured_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  PRIMARY KEY (id),
+                  UNIQUE KEY uq_audio_job_metrics_job_key (audio_job_id, metric_key),
+                  KEY idx_audio_job_metrics_user_time (user_id, captured_at),
+                  KEY idx_audio_job_metrics_user_key_time (user_id, metric_key, captured_at),
+                  KEY idx_audio_job_metrics_product_key_time (product_id, metric_key, captured_at),
+                  CONSTRAINT fk_audio_job_metrics_job FOREIGN KEY (audio_job_id) REFERENCES audio_jobs(id) ON DELETE CASCADE,
+                  CONSTRAINT fk_audio_job_metrics_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                  CONSTRAINT fk_audio_job_metrics_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                """,
+            )
+
+            execute(
+                cur,
+                """
+                CREATE TABLE IF NOT EXISTS audio_job_feature_snapshots (
+                  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                  audio_job_id BIGINT UNSIGNED NOT NULL,
+                  user_id BIGINT UNSIGNED NOT NULL,
+                  product_id BIGINT UNSIGNED NOT NULL,
+                  features_json JSON NOT NULL,
+                  numeric_features_json JSON NULL,
+                  feature_labels_json JSON NULL,
+                  feature_units_json JSON NULL,
+                  captured_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                  PRIMARY KEY (id),
+                  UNIQUE KEY uq_audio_job_feature_snapshots_job (audio_job_id),
+                  KEY idx_audio_job_feature_snapshots_user_time (user_id, captured_at),
+                  KEY idx_audio_job_feature_snapshots_product_time (product_id, captured_at),
+                  CONSTRAINT fk_audio_job_feature_snapshots_job FOREIGN KEY (audio_job_id) REFERENCES audio_jobs(id) ON DELETE CASCADE,
+                  CONSTRAINT fk_audio_job_feature_snapshots_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                  CONSTRAINT fk_audio_job_feature_snapshots_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                """,
+            )
+
+            execute_sql_file(cur, project_root / "db" / "migrations" / "005_analysis_platform.sql")
 
             execute(
                 cur,
@@ -263,7 +338,7 @@ def main() -> None:
                 JOIN (
                   SELECT 'audioprint' AS product_code, 'admin' AS code, 'Admin' AS name, 'Gestion de la solucion, usuarios e historial.' AS description
                   UNION ALL
-                  SELECT 'audioprint', 'user', 'User', 'Uso normal de la solucion y gestion de sus propios audios.'
+                  SELECT 'audioprint', 'user', 'User', 'Uso normal de la solución y gestión de sus propios audios.'
                   UNION ALL
                   SELECT 'qvoice', 'admin', 'Admin', 'Gestion de accesos y configuracion inicial de la solucion.'
                   UNION ALL

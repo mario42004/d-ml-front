@@ -1,6 +1,6 @@
 .page-stack {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .portal-hero,
@@ -12,6 +12,7 @@
 
 .stats-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
 }
 
 .portal-card-grid,
@@ -26,10 +27,12 @@
 
 .admin-management > .card {
   font-size: 0.94rem;
+  min-width: 0;
 }
 
 .admin-management > .card h2 {
   font-size: clamp(1.35rem, 2vw, 1.75rem);
+  line-height: 1.18;
 }
 
 .admin-management > .card > p {
@@ -68,6 +71,7 @@
 
 .admin-management .table-actions {
   gap: 0.75rem;
+  align-items: stretch;
 }
 
 .compact-product-form {
@@ -80,7 +84,7 @@
 
 .audioprint-trend-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
   gap: 1rem;
 }
 
@@ -93,18 +97,20 @@
   margin: 0.75rem 0 0.9rem;
   color: var(--color-muted);
   font-size: 0.9rem;
+  line-height: 1.35;
 }
 
 .audioprint-trend-svg {
   width: 100%;
   height: auto;
   display: block;
+  overflow: visible;
 }
 
 .audioprint-analysis-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
+  gap: 1.15rem;
   align-items: start;
 }
 
@@ -116,6 +122,7 @@
 
 .audioprint-summary-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
 }
 
 .audioprint-plot-grid {
@@ -125,7 +132,7 @@
 .audioprint-image,
 .audioprint-thumb {
   width: 100%;
-  border-radius: 18px;
+  border-radius: 8px;
   border: 1px solid rgba(255, 199, 77, 0.14);
   background: rgba(255, 255, 255, 0.03);
 }
@@ -152,6 +159,7 @@
 .audioprint-meta-list span {
   color: var(--color-muted);
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .audioprint-peak-grid {
@@ -163,11 +171,65 @@
 
 .audioprint-peak-grid span {
   padding: 0.68rem 0.75rem;
-  border-radius: 10px;
+  border-radius: 8px;
   color: var(--color-muted);
   background: rgba(255, 255, 255, 0.045);
   border: 1px solid rgba(255, 255, 255, 0.08);
   line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.portal-hero .table-actions {
+  align-self: end;
+}
+
+.portal-hero .button,
+.portal-hero .button-secondary {
+  width: 100%;
+}
+
+.feature-card p {
+  font-size: clamp(0.9rem, 1.7vw, 1.02rem);
+}
+
+.feature-card small,
+.chart-help {
+  color: var(--color-muted);
+  font-size: 0.84rem;
+  line-height: 1.38;
+}
+
+.feature-card .metric-value {
+  color: var(--color-text);
+  font-size: clamp(1rem, 1.9vw, 1.18rem);
+  font-weight: 700;
+}
+
+.metric-unit {
+  color: var(--color-muted);
+  font-size: 0.82em;
+  font-weight: 600;
+}
+
+.detail-card .table-actions {
+  align-items: stretch;
+}
+
+.detail-card .table-actions a,
+.detail-card .table-actions button {
+  flex: 1 1 12rem;
+}
+
+.users-table .table-actions {
+  gap: 0.55rem;
+}
+
+.users-table .table-actions a,
+.users-table .table-actions button {
+  flex: 1 1 8.5rem;
+  min-height: 2.5rem;
+  padding: 0.62rem 0.75rem;
+  font-size: 0.88rem;
 }
 
 @media (max-width: 1080px) {
@@ -187,5 +249,20 @@
   .audioprint-plot-grid,
   .audioprint-peak-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .audioprint-trend-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-hero .stats-grid,
+  .portal-hero .table-actions {
+    width: 100%;
+  }
+
+  .audioprint-analysis-grid {
+    gap: 1rem;
   }
 }

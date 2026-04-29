@@ -9,7 +9,7 @@ set_current_product('smart_tales');
 
 $membership = current_membership('smart_tales');
 
-render_app_header('Smart Tales | Solucion');
+render_app_header('Smart Tales | Solución');
 ?>
 <section class="page-stack">
   <section class="hero">
@@ -17,12 +17,12 @@ render_app_header('Smart Tales | Solucion');
       <div>
         <span class="role-badge">Smart Tales</span>
         <h1>Cuentos personalizados con voces familiares y biblioteca narrativa.</h1>
-        <p class="lead">Este producto nace de la documentacion funcional de <strong>smart_tale</strong> y ya queda integrado en el sistema comun de usuarios, productos y permisos de <strong>d-ml</strong>. Su siguiente paso es conectar perfiles infantiles, voces autorizadas, generacion segura de historias y audio sintetizado sin abrir un sistema paralelo.</p>
+        <p class="lead">Este producto nace de la documentación funcional de <strong>smart_tale</strong> y ya queda integrado en el sistema común de usuarios, productos y permisos de <strong>d-ml</strong>. Su siguiente paso es conectar perfiles infantiles, voces autorizadas, generación segura de historias y audio sintetizado sin abrir un sistema paralelo.</p>
       </div>
       <aside class="route-card">
         <strong>Rol actual</strong>
         <code><?= htmlspecialchars((string) ($membership['role_name'] ?? 'User'), ENT_QUOTES, 'UTF-8') ?></code>
-        <p class="route-note">Tu acceso ya existe dentro del portal. La capa de generacion se conectara mediante servicios dedicados.</p>
+        <p class="route-note">Tu acceso ya existe dentro del portal. La capa de generación se conectará mediante servicios dedicados.</p>
       </aside>
     </div>
   </section>
@@ -30,14 +30,14 @@ render_app_header('Smart Tales | Solucion');
   <section class="panel-grid">
     <article class="card">
       <span class="section-tag">Producto</span>
-      <h2>Que cubre Smart Tales</h2>
-      <p>Perfiles de menores, configuracion de tema y tono, clonacion de voz con consentimiento, generacion de texto infantil y entrega de audio listo para escuchar. El objetivo es una rutina nocturna emocional, repetible y trazable.</p>
+      <h2>Qué cubre Smart Tales</h2>
+      <p>Perfiles de menores, configuración de tema y tono, clonación de voz con consentimiento, generación de texto infantil y entrega de audio listo para escuchar. El objetivo es una rutina nocturna emocional, repetible y trazable.</p>
     </article>
 
     <article class="card">
-      <span class="section-tag">Integracion</span>
-      <h2>Conectado al sistema comun</h2>
-      <p>La identidad del usuario, sus permisos y su acceso al producto se resuelven en el mismo sistema de informacion que ya usan Audioprint y Qvoice. La logica intensiva del producto vivira fuera del portal, desacoplada en servicios de LLM, TTS y almacenamiento.</p>
+      <span class="section-tag">Integración</span>
+      <h2>Conectado al sistema común</h2>
+      <p>La identidad del usuario, sus permisos y su acceso al producto se resuelven en el mismo sistema de información que ya usan Audioprint y Qvoice. La lógica intensiva del producto vivirá fuera del portal, desacoplada en servicios de LLM, TTS y almacenamiento.</p>
     </article>
   </section>
 
@@ -55,7 +55,7 @@ render_app_header('Smart Tales | Solucion');
     <article class="card">
       <span class="section-tag">Siguiente entrega</span>
       <h2>MVP recomendado</h2>
-      <p>El MVP debe abrir CRUD de menores, alta de voces autorizadas y generacion de cuentos bajo guardrails. La integracion detallada queda documentada en <code>docs/smart-tales-integration.md</code>.</p>
+      <p>El MVP debe abrir CRUD de menores, alta de voces autorizadas y generación de cuentos bajo guardrails. La integración detallada queda documentada en <code>docs/smart-tales-integration.md</code>.</p>
     </article>
   </section>
 </section>

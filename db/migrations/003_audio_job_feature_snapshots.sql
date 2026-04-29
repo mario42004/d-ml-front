@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS audio_job_feature_snapshots (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  audio_job_id BIGINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  product_id BIGINT UNSIGNED NOT NULL,
+  features_json JSON NOT NULL,
+  numeric_features_json JSON NULL,
+  feature_labels_json JSON NULL,
+  feature_units_json JSON NULL,
+  captured_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_audio_job_feature_snapshots_job (audio_job_id),
+  KEY idx_audio_job_feature_snapshots_user_time (user_id, captured_at),
+  KEY idx_audio_job_feature_snapshots_product_time (product_id, captured_at),
+  CONSTRAINT fk_audio_job_feature_snapshots_job FOREIGN KEY (audio_job_id) REFERENCES audio_jobs(id) ON DELETE CASCADE,
+  CONSTRAINT fk_audio_job_feature_snapshots_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_audio_job_feature_snapshots_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -67,7 +67,7 @@ render_public_header('d-ml | Crear cuenta');
   <article class="auth-side">
     <span class="eyebrow">Registro</span>
     <h1>Crea tu acceso para empezar a trabajar con las soluciones de d-ml.</h1>
-    <p class="lead">El alta abierta habilita tu entrada inicial en Audioprint, la solución activa para procesar audio, conservar análisis por captura y construir un historial reutilizable.</p>
+    <p class="lead">El alta abierta habilita tu entrada inicial en Audioprint, la solución activa para procesar audio, conservar análisis por captura y construir un historial reútilizable.</p>
     <div class="stack">
       <article class="feature-card">
         <strong>Registro seguro</strong>

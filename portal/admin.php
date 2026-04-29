@@ -302,7 +302,7 @@ render_app_header('d-ml | Admin');
     <article class="card">
       <span class="section-tag">Usuarios</span>
       <h2>Accesos activos y membresías</h2>
-      <p>Controla el acceso a cada solución, el estado de la cuenta y la administración global del sistema sin mezclar esta capa de gestión con las herramientas operativas.</p>
+      <p>Controla el acceso a cada solución, el estado de la cuenta y la administración global del sistema sin mezclar está capa de gestión con las herramientas operativas.</p>
 
       <div class="table-shell">
         <table class="users-table">
@@ -310,7 +310,7 @@ render_app_header('d-ml | Admin');
             <tr>
               <th>Usuario</th>
               <th>Correo</th>
-              <th>Soluciones</th>
+              <th>Soluciónes</th>
               <th>Admin global</th>
               <th>Estado</th>
               <th>Control global</th>
@@ -379,7 +379,7 @@ render_app_header('d-ml | Admin');
                       <button class="button-secondary" type="submit">Cambiar contraseña</button>
                     </form>
 
-                    <form method="post" action="/portal/admin.php" class="inline-form" onsubmit="return confirm('¿Estas seguro de que deseas eliminar este usuario y todos sus registros asociados?');">
+                    <form method="post" action="/portal/admin.php" class="inline-form" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este usuario y todos sus registros asociados?');">
                       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                       <input type="hidden" name="action" value="delete_user">
                       <input type="hidden" name="user_id" value="<?= (int) $userRow['id'] ?>">
@@ -399,7 +399,7 @@ render_app_header('d-ml | Admin');
   <article class="card">
     <span class="section-tag">Actividad</span>
     <h2>Ultimos audios procesados</h2>
-    <p>Un resumen rapido de los ultimos archivos subidos, con su estado y acceso directo al escalograma cuando existe.</p>
+    <p>Un resumen rapido de los últimos archivos subidos, con su estado y acceso directo al escalograma cuando existe.</p>
 
     <div class="table-shell">
       <table class="users-table">

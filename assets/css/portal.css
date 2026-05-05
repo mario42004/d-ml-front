@@ -82,6 +82,126 @@
   margin-bottom: 0;
 }
 
+.organization-admin-row {
+  display: grid;
+  gap: 0.65rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.organization-admin-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.coin-balance-strip,
+.coin-admin-line {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.coin-balance-strip {
+  margin: 0.8rem 0 1rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.82);
+}
+
+.coin-balance-strip strong {
+  font-size: 1.4rem;
+}
+
+.coin-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0.42rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(20, 83, 45, 0.1);
+  color: #14532d;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.coin-admin-line input {
+  flex: 0 1 6.25rem;
+  min-width: 5.5rem;
+}
+
+.coin-admin-line button {
+  flex: 1 1 6.5rem;
+}
+
+.coin-summary-list {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.coin-mini {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.85rem;
+  padding: 0.28rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--color-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.user-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.user-admin-wide {
+  grid-column: 1 / -1;
+}
+
+.user-admin-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.audiometer-hero {
+  display: grid;
+  max-width: 980px;
+}
+
+.audiometer-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.audiometer-hero-meta .role-badge {
+  margin: 0;
+}
+
+.audiometer-role-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.8rem;
+  padding: 0.34rem 0.62rem;
+  border-radius: 999px;
+  border: 1px solid rgba(70, 199, 151, 0.28);
+  background: rgba(70, 199, 151, 0.08);
+  color: #bdf4db;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
 .audioprint-trend-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
@@ -179,6 +299,233 @@
   overflow-wrap: anywhere;
 }
 
+.audiometer-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+  gap: 1.1rem;
+  align-items: start;
+}
+
+.audiometer-console,
+.audiometer-results {
+  min-width: 0;
+}
+
+.audiometer-stage {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.65fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+  margin: 1rem 0;
+}
+
+.audiometer-readout,
+.audiometer-level,
+.audiometer-cell {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.audiometer-readout,
+.audiometer-level {
+  padding: 1rem;
+}
+
+.audiometer-readout {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.audiometer-readout span,
+.audiometer-readout small,
+.audiometer-level output,
+.audiometer-cell span,
+.audiometer-cell small,
+.audiometer-legend {
+  color: var(--color-muted);
+}
+
+.audiometer-readout strong {
+  font-size: clamp(2rem, 6vw, 3.8rem);
+  line-height: 1;
+}
+
+.audiometer-level {
+  display: grid;
+  gap: 0.8rem;
+  align-content: center;
+}
+
+.audiometer-level input {
+  width: 100%;
+}
+
+.audiometer-level output {
+  font-weight: 700;
+}
+
+.audiometer-actions {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.audiometer-action-row {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.audiometer-action-row:first-child {
+  grid-template-columns: 1.15fr 0.9fr 0.9fr;
+}
+
+.audiometer-action-row:last-child {
+  grid-template-columns: 1.05fr 0.9fr 1fr 1.05fr;
+}
+
+.audiometer-actions button {
+  min-height: 2.55rem;
+  padding: 0.58rem 0.72rem;
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.audiometer-start-button {
+  background: #2f7d59;
+  color: #f8fff9;
+  box-shadow: 0 10px 24px rgba(47, 125, 89, 0.18);
+}
+
+.audiometer-start-button:hover {
+  background: #25694a;
+}
+
+.audiometer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.audiometer-status {
+  margin: 0.8rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.audiometer-status.is-error {
+  color: var(--color-danger);
+}
+
+.audiometer-cell {
+  display: grid;
+  gap: 0.18rem;
+  min-height: 5.1rem;
+  padding: 0.65rem;
+  color: var(--color-text);
+  text-align: left;
+}
+
+.audiometer-cell.is-active {
+  border-color: rgba(255, 199, 77, 0.58);
+  box-shadow: 0 0 0 2px rgba(255, 199, 77, 0.1);
+}
+
+.audiometer-cell.is-done {
+  background: rgba(70, 199, 151, 0.09);
+  border-color: rgba(70, 199, 151, 0.26);
+}
+
+.audiometer-chart-wrap {
+  margin-top: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+  overflow: hidden;
+}
+
+.audiometer-chart {
+  display: block;
+  width: 100%;
+  min-height: 290px;
+}
+
+.audiometer-chart text {
+  fill: var(--color-muted);
+  font-size: 0.82rem;
+}
+
+.audiometer-chart .chart-grid line,
+.audiometer-chart .chart-axis {
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 1;
+}
+
+.audiometer-chart polyline {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.audiometer-chart circle {
+  stroke: #080808;
+  stroke-width: 2;
+}
+
+.audiometer-chart .left {
+  stroke: #46c797;
+  fill: #46c797;
+}
+
+.audiometer-chart .right {
+  stroke: #ffc74d;
+  fill: #ffc74d;
+}
+
+.audiometer-chart .freq-label {
+  text-anchor: middle;
+}
+
+.audiometer-legend {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.8rem;
+}
+
+.audiometer-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.audiometer-legend i {
+  width: 0.8rem;
+  aspect-ratio: 1;
+  border-radius: 999px;
+}
+
+.audiometer-legend .left {
+  background: #46c797;
+}
+
+.audiometer-legend .right {
+  background: #ffc74d;
+}
+
+.audiometer-report-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.audiometer-report-table {
+  margin-top: 1rem;
+}
+
 .portal-hero .table-actions {
   align-self: end;
 }
@@ -238,7 +585,10 @@
   .auth-layout,
   .panel-grid,
   .audioprint-analysis-grid,
+  .audiometer-layout,
   .admin-management,
+  .user-admin-grid,
+  .user-admin-options,
   .stats-grid,
   .portal-card-grid,
   .feature-grid {
@@ -247,7 +597,10 @@
 
   .audioprint-summary-grid,
   .audioprint-plot-grid,
-  .audioprint-peak-grid {
+  .audioprint-peak-grid,
+  .audiometer-stage,
+  .audiometer-report-grid,
+  .audiometer-action-row {
     grid-template-columns: 1fr;
   }
 }
@@ -258,8 +611,13 @@
   }
 
   .portal-hero .stats-grid,
+  .audiometer-grid,
   .portal-hero .table-actions {
     width: 100%;
+  }
+
+  .audiometer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .audioprint-analysis-grid {

@@ -46,9 +46,15 @@ render_app_header('d-ml | Mis accesos');
       <article class="card">
         <span class="tag"><?= htmlspecialchars((string) $membership['role_name'], ENT_QUOTES, 'UTF-8') ?></span>
         <h3><?= htmlspecialchars((string) $membership['product_name'], ENT_QUOTES, 'UTF-8') ?></h3>
-        <p>Acceso habilitado para está solución con rol <strong><?= htmlspecialchars((string) $membership['role_code'], ENT_QUOTES, 'UTF-8') ?></strong>. Ese rol define lo que puedes operar dentro de la herramienta, mientras que la administración global es un permiso aparte.</p>
+        <p>Acceso habilitado en <strong><?= htmlspecialchars((string) $membership['organization_name'], ENT_QUOTES, 'UTF-8') ?></strong> con rol <strong><?= htmlspecialchars((string) $membership['role_code'], ENT_QUOTES, 'UTF-8') ?></strong>. Ese rol define lo que puedes operar dentro de este contexto.</p>
         <div class="cta-actions">
-          <a class="button" href="<?= htmlspecialchars(dashboard_url_for_role((string) $membership['role_code'], (string) $membership['product_code']), ENT_QUOTES, 'UTF-8') ?>">Entrar</a>
+          <?php
+            $membershipUrl = product_dashboard_path((string) $membership['product_code']) ?? '/dashboard.php';
+            if ($membershipUrl !== '/dashboard.php') {
+                $membershipUrl .= '?org_id=' . (int) $membership['organization_id'];
+            }
+          ?>
+          <a class="button" href="<?= htmlspecialchars($membershipUrl, ENT_QUOTES, 'UTF-8') ?>">Entrar</a>
         </div>
       </article>
     <?php endforeach; ?>

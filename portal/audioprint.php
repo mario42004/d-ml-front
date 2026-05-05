@@ -10,7 +10,9 @@ set_current_product('audioprint');
 
 $user = current_user();
 $canAdministerAudioprint = can_administer_product('audioprint');
+$currentOrganizationId = current_organization_id();
 $currentRole = (string) (($user['primary_role_name'] ?? $user['primary_role'] ?? 'user'));
+$audioprintCoins = product_coin_balance((int) $user['id'], 'audioprint');
 $message = null;
 $messageType = 'success';
 
@@ -30,7 +32,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($job === null) {
                 $message = 'El registro seleccionado no existe.';
                 $messageType = 'error';
-            } elseif (!$canAdministerAudioprint && (int) $job['user_id'] !== (int) $user['id']) {
+            } elseif (!is_system_admin() && (int) ($job['organization_id'] ?? 0) !== $currentOrganizationId) {
+                $message = 'No tienes permisos para eliminar este registro.';
+                $messageType = 'error';
+            } elseif (!$canAdministerAudioprint) {
                 $message = 'No tienes permisos para eliminar este registro.';
                 $messageType = 'error';
             } else {
@@ -63,8 +68,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$jobs = list_audio_jobs_for_user((int) $user['id']);
-$adminJobs = $canAdministerAudioprint ? list_recent_audio_jobs(50) : [];
+$jobs = list_audio_jobs_for_user((int) $user['id'], $currentOrganizationId);
+$audioprintCoins = product_coin_balance((int) $user['id'], 'audioprint');
+$adminJobs = $canAdministerAudioprint ? list_recent_audio_jobs(50, $currentOrganizationId) : [];
 $completedJobs = 0;
 foreach ($jobs as $index => $job) {
     $jobs[$index] = audioprint_enrich_job_record($job);
@@ -86,6 +92,9 @@ if ($selectedAnalysisId > 0) {
     $candidateJob = get_audio_job_by_id($selectedAnalysisId);
     if ($candidateJob === null) {
         $message = 'El análisis solicitado no existe.';
+        $messageType = 'error';
+    } elseif (!is_system_admin() && (int) ($candidateJob['organization_id'] ?? 0) !== $currentOrganizationId) {
+        $message = 'No tienes permisos para consultar este análisis.';
         $messageType = 'error';
     } elseif (!$canAdministerAudioprint && (int) $candidateJob['user_id'] !== (int) $user['id']) {
         $message = 'No tienes permisos para consultar este análisis.';
@@ -710,25 +719,29 @@ render_app_header('Audioprint | Mi espacio');
       <span class="section-tag">Nuevo audio</span>
       <h2>Generar análisis</h2>
       <p>Sube un archivo de audio y Audioprint lo enviará a la API para devolverte una visual principal, métricas temporales y espectrales, y un análisis reutilizable.</p>
+      <div class="coin-balance-strip">
+        <strong><?= (int) $audioprintCoins ?></strong>
+        <span>coins disponibles para Audioprint</span>
+      </div>
 
       <form method="post" action="/portal/audioprint.php" class="form-block" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
         <input type="hidden" name="action" value="upload">
         <div>
           <label for="audio_file">Archivo de audio</label>
-          <input id="audio_file" name="audio_file" type="file" accept=".wav,.mp3,.flac,.ogg,.m4a,audio/*" required>
+          <input id="audio_file" name="audio_file" type="file" accept=".wav,.mp3,.flac,.ogg,.m4a,audio/*" <?= $audioprintCoins > 0 ? '' : 'disabled' ?> required>
         </div>
         <div>
           <label for="audio_description">Descripción del audio</label>
-          <input id="audio_description" name="audio_description" type="text" maxlength="50" required placeholder="Ej. Motor bomba turno mañana">
+          <input id="audio_description" name="audio_description" type="text" maxlength="50" <?= $audioprintCoins > 0 ? '' : 'disabled' ?> required placeholder="Ej. Motor bomba turno mañana">
           <small class="field-help">Máximo 50 caracteres. Se mostrará en el dashboard y la autocorrelación.</small>
         </div>
-        <button class="button" type="submit">Subir y generar</button>
+        <button class="button" type="submit" <?= $audioprintCoins > 0 ? '' : 'disabled' ?>>Subir y generar</button>
       </form>
 
       <div class="helper">
         <strong>Qué ocurre al subir</strong>
-        <span>El sistema guarda el audio, llama a la API, conserva la imagen principal y el JSON completo del análisis, y deja ambos artefactos enlazados a tu historial dentro del producto.</span>
+        <span><?= $audioprintCoins > 0 ? 'Cada procesamiento completado consume 1 coin de Audioprint.' : 'No tienes coins disponibles para Audioprint. Solicita una recarga al superadmin.' ?></span>
       </div>
     </article>
   </section>
@@ -934,12 +947,14 @@ render_app_header('Audioprint | Mi espacio');
                   <?php if (empty($job['scalogram_url']) && empty($job['analysis_available'])): ?>
                     <span class="muted">Pendiente</span>
                   <?php endif; ?>
-                  <form method="post" action="/portal/audioprint.php" class="inline-form" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este audio y su análisis asociado?');">
-                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
-                    <input type="hidden" name="action" value="delete_job">
-                    <input type="hidden" name="job_id" value="<?= (int) $job['id'] ?>">
-                    <button class="button-secondary" type="submit">Eliminar</button>
-                  </form>
+                  <?php if ($canAdministerAudioprint): ?>
+                    <form method="post" action="/portal/audioprint.php" class="inline-form" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este audio y su análisis asociado?');">
+                      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+                      <input type="hidden" name="action" value="delete_job">
+                      <input type="hidden" name="job_id" value="<?= (int) $job['id'] ?>">
+                      <button class="button-secondary" type="submit">Eliminar</button>
+                    </form>
+                  <?php endif; ?>
                 </div>
               </td>
             </tr>

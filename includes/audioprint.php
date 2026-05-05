@@ -54,12 +54,23 @@ function audioprint_product(): ?array
 
 function ensure_audio_jobs_description_column(): void
 {
+    ensure_organization_schema();
+
     $stmt = db()->query("SHOW COLUMNS FROM audio_jobs LIKE 'audio_description'");
     if ($stmt !== false && $stmt->fetch() !== false) {
-        return;
+        // continue to organization check
+    } else {
+        db()->exec("ALTER TABLE audio_jobs ADD COLUMN audio_description VARCHAR(50) NOT NULL DEFAULT '' AFTER original_filename");
     }
 
-    db()->exec("ALTER TABLE audio_jobs ADD COLUMN audio_description VARCHAR(50) NOT NULL DEFAULT '' AFTER original_filename");
+    $orgStmt = db()->query("SHOW COLUMNS FROM audio_jobs LIKE 'organization_id'");
+    if ($orgStmt !== false && $orgStmt->fetch() === false) {
+        $organizationId = (int) default_organization()['id'];
+        db()->exec("ALTER TABLE audio_jobs ADD COLUMN organization_id BIGINT UNSIGNED NULL AFTER user_id");
+        db()->exec("UPDATE audio_jobs SET organization_id = {$organizationId} WHERE organization_id IS NULL");
+        db()->exec("ALTER TABLE audio_jobs MODIFY organization_id BIGINT UNSIGNED NOT NULL");
+        db()->exec("ALTER TABLE audio_jobs ADD KEY idx_audio_jobs_org_time (organization_id, created_at)");
+    }
 }
 
 function audioprint_normalize_description(string $description): string
@@ -84,12 +95,17 @@ function audioprint_text_length(string $value): int
 function create_audio_job_record(int $userId, int $productId, string $originalFilename, string $audioDescription, string $mimeType, int $sizeBytes, string $audioPath, string $audioUrl): int
 {
     ensure_audio_jobs_description_column();
+    $organizationId = current_organization_id();
+    if ($organizationId <= 0) {
+        throw new RuntimeException('No hay una organización activa para crear el análisis.');
+    }
 
     $stmt = db()->prepare(
-        'INSERT INTO audio_jobs (user_id, product_id, original_filename, audio_description, mime_type, audio_size_bytes, audio_path, audio_url, status) VALUES (:user_id, :product_id, :original_filename, :audio_description, :mime_type, :audio_size_bytes, :audio_path, :audio_url, :status)'
+        'INSERT INTO audio_jobs (user_id, organization_id, product_id, original_filename, audio_description, mime_type, audio_size_bytes, audio_path, audio_url, status) VALUES (:user_id, :organization_id, :product_id, :original_filename, :audio_description, :mime_type, :audio_size_bytes, :audio_path, :audio_url, :status)'
     );
     $stmt->execute([
         'user_id' => $userId,
+        'organization_id' => $organizationId,
         'product_id' => $productId,
         'original_filename' => $originalFilename,
         'audio_description' => $audioDescription,
@@ -178,24 +194,28 @@ function ensure_audio_job_feature_snapshots_table(): void
     );
 }
 
-function list_audio_jobs_for_user(int $userId): array
+function list_audio_jobs_for_user(int $userId, ?int $organizationId = null): array
 {
     ensure_audio_jobs_description_column();
+    $organizationId = $organizationId ?? current_organization_id();
 
     $stmt = db()->prepare(
-        'SELECT id, original_filename, audio_description, mime_type, audio_size_bytes, audio_url, scalogram_path, scalogram_url, status, error_message, created_at, processed_at FROM audio_jobs WHERE user_id = :user_id ORDER BY created_at DESC, id DESC'
+        'SELECT id, user_id, organization_id, original_filename, audio_description, mime_type, audio_size_bytes, audio_url, scalogram_path, scalogram_url, status, error_message, created_at, processed_at FROM audio_jobs WHERE user_id = :user_id AND organization_id = :organization_id ORDER BY created_at DESC, id DESC'
     );
-    $stmt->execute(['user_id' => $userId]);
+    $stmt->execute(['user_id' => $userId, 'organization_id' => $organizationId]);
     return $stmt->fetchAll();
 }
 
-function list_recent_audio_jobs(int $limit = 20): array
+function list_recent_audio_jobs(int $limit = 20, ?int $organizationId = null): array
 {
     ensure_audio_jobs_description_column();
+    $organizationId = $organizationId ?? current_organization_id();
+    $where = is_system_admin() ? '1 = 1' : 'j.organization_id = :organization_id';
 
     $sql = <<<'SQL'
         SELECT
             j.id,
+            j.organization_id,
             j.original_filename,
             j.audio_description,
             j.status,
@@ -210,11 +230,16 @@ function list_recent_audio_jobs(int $limit = 20): array
             u.email
         FROM audio_jobs j
         INNER JOIN users u ON u.id = j.user_id
+        WHERE __WHERE__
         ORDER BY j.created_at DESC, j.id DESC
         LIMIT :limit
     SQL;
+    $sql = str_replace('__WHERE__', $where, $sql);
 
     $stmt = db()->prepare($sql);
+    if (!is_system_admin()) {
+        $stmt->bindValue(':organization_id', $organizationId, PDO::PARAM_INT);
+    }
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
     return $stmt->fetchAll();
@@ -225,7 +250,7 @@ function get_audio_job_by_id(int $jobId): ?array
     ensure_audio_jobs_description_column();
 
     $stmt = db()->prepare(
-        'SELECT id, user_id, original_filename, audio_description, audio_path, audio_url, scalogram_path, scalogram_url, status FROM audio_jobs WHERE id = :id LIMIT 1'
+        'SELECT id, user_id, organization_id, original_filename, audio_description, audio_path, audio_url, scalogram_path, scalogram_url, status FROM audio_jobs WHERE id = :id LIMIT 1'
     );
     $stmt->execute(['id' => $jobId]);
     $job = $stmt->fetch();
@@ -544,6 +569,9 @@ function list_audio_job_metric_export_rows(?int $userId = null): array
     if ($userId !== null) {
         $where = 'WHERE m.user_id = :user_id';
         $params['user_id'] = $userId;
+    } elseif (!is_system_admin()) {
+        $where = 'WHERE j.organization_id = :organization_id';
+        $params['organization_id'] = current_organization_id();
     }
 
     $stmt = db()->prepare(
@@ -610,6 +638,9 @@ function list_audio_job_feature_export_rows(?int $userId = null): array
     if ($userId !== null) {
         $where = 'WHERE s.user_id = :user_id';
         $params['user_id'] = $userId;
+    } elseif (!is_system_admin()) {
+        $where = 'WHERE j.organization_id = :organization_id';
+        $params['organization_id'] = current_organization_id();
     }
 
     $stmt = db()->prepare(
@@ -1121,6 +1152,12 @@ function handle_audioprint_upload(int $userId, array $file, string $audioDescrip
 
     $productId = (int) $product['id'];
     $jobId = create_audio_job_record($userId, $productId, $originalFilename, $audioDescription, $mimeType, $sizeBytes, $audioPath, $audioUrl);
+    $coinCharge = consume_product_coin($userId, 'audioprint', 'audio_jobs', $jobId, 'Procesamiento de audio en Audioprint');
+    if (($coinCharge['ok'] ?? false) !== true) {
+        delete_audio_job_record($jobId);
+        return ['ok' => false, 'message' => (string) ($coinCharge['message'] ?? 'No tienes coins disponibles para Audioprint.')];
+    }
+
     $analysisEngineId = ensure_analysis_engine(
         $productId,
         'audioprint_wavelet',
@@ -1153,6 +1190,7 @@ function handle_audioprint_upload(int $userId, array $file, string $audioDescrip
         $errorMessage = (string) ($apiResult['message'] ?? 'La API devolvió un error.');
         finalize_audio_job($jobId, 'failed', null, null, $errorMessage);
         finalize_analysis_job($analysisJobId, 'failed', null, $errorMessage);
+        refund_product_coin($userId, 'audioprint', 'audio_jobs', $jobId, 'Reembolso por fallo del procesamiento Audioprint');
         return ['ok' => false, 'message' => $errorMessage];
     }
 
@@ -1160,6 +1198,7 @@ function handle_audioprint_upload(int $userId, array $file, string $audioDescrip
     if (!is_array($analysisPayload)) {
         finalize_audio_job($jobId, 'failed', null, null, 'La API no devolvió un análisis interpretable.');
         finalize_analysis_job($analysisJobId, 'failed', null, 'La API no devolvió un análisis interpretable.');
+        refund_product_coin($userId, 'audioprint', 'audio_jobs', $jobId, 'Reembolso por respuesta no interpretable de Audioprint');
         return ['ok' => false, 'message' => 'La API no devolvió un análisis interpretable.'];
     }
 
@@ -1174,12 +1213,14 @@ function handle_audioprint_upload(int $userId, array $file, string $audioDescrip
     if (!is_string($primaryImageBytes) || $primaryImageBytes === '') {
         finalize_audio_job($jobId, 'failed', null, null, 'La API devolvió una imagen principal no válida.');
         finalize_analysis_job($analysisJobId, 'failed', $analysisPayload, 'La API devolvió una imagen principal no válida.');
+        refund_product_coin($userId, 'audioprint', 'audio_jobs', $jobId, 'Reembolso por imagen principal no válida de Audioprint');
         return ['ok' => false, 'message' => 'La API devolvió una imagen principal no válida.'];
     }
 
     if (file_put_contents($scalogramPath, $primaryImageBytes) === false) {
         finalize_audio_job($jobId, 'failed', null, null, 'No fue posible guardar la imagen principal del análisis.');
         finalize_analysis_job($analysisJobId, 'failed', $analysisPayload, 'No fue posible guardar la imagen principal del análisis.');
+        refund_product_coin($userId, 'audioprint', 'audio_jobs', $jobId, 'Reembolso por fallo guardando imagen Audioprint');
         return ['ok' => false, 'message' => 'No fue posible guardar la imagen principal del análisis.'];
     }
 
@@ -1188,6 +1229,7 @@ function handle_audioprint_upload(int $userId, array $file, string $audioDescrip
         @unlink($scalogramPath);
         finalize_audio_job($jobId, 'failed', null, null, 'No fue posible guardar el análisis generado.');
         finalize_analysis_job($analysisJobId, 'failed', $analysisPayload, 'No fue posible guardar el análisis generado.');
+        refund_product_coin($userId, 'audioprint', 'audio_jobs', $jobId, 'Reembolso por fallo guardando análisis Audioprint');
         return ['ok' => false, 'message' => 'No fue posible guardar el análisis generado.'];
     }
 
@@ -1212,6 +1254,7 @@ function handle_audioprint_upload(int $userId, array $file, string $audioDescrip
     } catch (Throwable $exception) {
         finalize_audio_job($jobId, 'failed', $scalogramPath, $scalogramUrl, 'No fue posible persistir las métricas del análisis.');
         finalize_analysis_job($analysisJobId, 'failed', $analysisPayload, 'No fue posible persistir las métricas del análisis.');
+        refund_product_coin($userId, 'audioprint', 'audio_jobs', $jobId, 'Reembolso por fallo persistiendo métricas Audioprint');
         return ['ok' => false, 'message' => 'El análisis se generó, pero no fue posible persistir sus métricas.'];
     }
 

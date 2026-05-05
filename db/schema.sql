@@ -17,6 +17,7 @@ CREATE TABLE users (
   first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100) NOT NULL,
   email VARCHAR(190) NOT NULL,
+  organization_id BIGINT UNSIGNED NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   is_system_admin TINYINT(1) NOT NULL DEFAULT 0,
@@ -24,8 +25,24 @@ CREATE TABLE users (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_users_email (email)
+  UNIQUE KEY uq_users_email (email),
+  KEY idx_users_organization (organization_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE organizations (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(160) NOT NULL,
+  slug VARCHAR(100) NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_organizations_slug (slug)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO organizations (name, slug, is_active)
+VALUES ('Genérica', 'generica', 1)
+ON DUPLICATE KEY UPDATE name = VALUES(name), is_active = VALUES(is_active);
 
 CREATE TABLE roles (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -43,16 +60,55 @@ CREATE TABLE roles (
 CREATE TABLE user_product_roles (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id BIGINT UNSIGNED NOT NULL,
+  organization_id BIGINT UNSIGNED NOT NULL,
   product_id BIGINT UNSIGNED NOT NULL,
   role_id BIGINT UNSIGNED NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_user_product_roles_user_product (user_id, product_id),
+  UNIQUE KEY uq_user_org_product_roles (user_id, organization_id, product_id),
+  KEY idx_user_product_roles_org (organization_id),
   KEY idx_user_product_roles_role_id (role_id),
   CONSTRAINT fk_user_product_roles_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_user_product_roles_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   CONSTRAINT fk_user_product_roles_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
   CONSTRAINT fk_user_product_roles_role FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE product_coin_wallets (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NOT NULL,
+  product_id BIGINT UNSIGNED NOT NULL,
+  balance INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_product_coin_wallets_user_product (user_id, product_id),
+  KEY idx_product_coin_wallets_product (product_id),
+  CONSTRAINT fk_product_coin_wallets_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_product_coin_wallets_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE product_coin_ledger (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NOT NULL,
+  product_id BIGINT UNSIGNED NOT NULL,
+  actor_user_id BIGINT UNSIGNED NULL,
+  amount INT NOT NULL,
+  balance_after INT NOT NULL,
+  movement_type VARCHAR(40) NOT NULL,
+  source_type VARCHAR(80) NULL,
+  source_id BIGINT UNSIGNED NULL,
+  description VARCHAR(255) NOT NULL DEFAULT '',
+  metadata_json JSON NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_product_coin_ledger_user_product_time (user_id, product_id, created_at),
+  KEY idx_product_coin_ledger_actor_time (actor_user_id, created_at),
+  KEY idx_product_coin_ledger_source (source_type, source_id),
+  CONSTRAINT fk_product_coin_ledger_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_product_coin_ledger_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+  CONSTRAINT fk_product_coin_ledger_actor FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE auth_sessions (
@@ -179,6 +235,7 @@ CREATE TABLE analysis_artifacts (
 CREATE TABLE audio_jobs (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id BIGINT UNSIGNED NOT NULL,
+  organization_id BIGINT UNSIGNED NOT NULL,
   product_id BIGINT UNSIGNED NOT NULL,
   original_filename VARCHAR(255) NOT NULL,
   audio_description VARCHAR(50) NOT NULL DEFAULT '',
@@ -195,9 +252,11 @@ CREATE TABLE audio_jobs (
   processed_at TIMESTAMP NULL DEFAULT NULL,
   PRIMARY KEY (id),
   KEY idx_audio_jobs_user_id (user_id),
+  KEY idx_audio_jobs_org_time (organization_id, created_at),
   KEY idx_audio_jobs_product_id (product_id),
   KEY idx_audio_jobs_status (status),
   CONSTRAINT fk_audio_jobs_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_audio_jobs_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   CONSTRAINT fk_audio_jobs_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -322,9 +381,32 @@ CREATE TABLE smart_tales_story_requests (
   CONSTRAINT fk_smart_tales_story_requests_voice FOREIGN KEY (voice_profile_id) REFERENCES smart_tales_voice_profiles(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE audiometer_tests (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NOT NULL,
+  organization_id BIGINT UNSIGNED NOT NULL,
+  product_id BIGINT UNSIGNED NOT NULL,
+  test_title VARCHAR(190) NOT NULL DEFAULT '',
+  device_label VARCHAR(190) NOT NULL DEFAULT '',
+  headphone_label VARCHAR(190) NOT NULL DEFAULT '',
+  volume_label VARCHAR(120) NOT NULL DEFAULT '',
+  environment_label VARCHAR(190) NOT NULL DEFAULT '',
+  calibration_note TEXT NULL,
+  result_payload_json JSON NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_audiometer_tests_user_time (user_id, created_at),
+  KEY idx_audiometer_tests_org_time (organization_id, created_at),
+  KEY idx_audiometer_tests_product_time (product_id, created_at),
+  CONSTRAINT fk_audiometer_tests_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_audiometer_tests_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  CONSTRAINT fk_audiometer_tests_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT INTO products (code, name, description, is_public, is_active, sort_order)
 VALUES
   ('audioprint', 'Audioprint', 'Solucion para subir audios y generar su analisis.', 1, 1, 10),
+  ('audiometer', 'Audiometer', 'Screening auditivo orientativo con tonos puros, audiograma relativo e historial de pruebas.', 1, 1, 15),
   ('qvoice', 'Qvoice', 'Solucion orientada al seguimiento de la voz humana en entornos laborales.', 1, 1, 20),
   ('smart_tales', 'Smart Tales', 'Cuentos personalizados con voces familiares, perfiles infantiles e historial narrativo.', 1, 1, 30)
 ON DUPLICATE KEY UPDATE
@@ -341,6 +423,10 @@ JOIN (
   SELECT 'audioprint' AS product_code, 'admin' AS code, 'Admin' AS name, 'Gestion del producto, usuarios e historial.' AS description
   UNION ALL
   SELECT 'audioprint', 'user', 'User', 'Uso normal del producto y gestión de sus propios audios.'
+  UNION ALL
+  SELECT 'audiometer', 'admin', 'Admin', 'Gestion del producto, usuarios e historial.'
+  UNION ALL
+  SELECT 'audiometer', 'user', 'User', 'Uso normal del screening auditivo y gestión de sus propias pruebas.'
   UNION ALL
   SELECT 'qvoice', 'admin', 'Admin', 'Gestion de accesos y configuracion inicial de la solucion.'
   UNION ALL

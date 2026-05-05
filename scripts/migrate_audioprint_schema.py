@@ -312,12 +312,15 @@ def main() -> None:
                 """,
             )
 
+            execute_sql_file(cur, project_root / "db" / "migrations" / "006_audiometer.sql")
+
             execute(
                 cur,
                 """
                 INSERT INTO products (code, name, description, is_public, is_active, sort_order)
                 VALUES
                   ('audioprint', 'Audioprint', 'Solucion para subir audios y generar su analisis.', 1, 1, 10),
+                  ('audiometer', 'Audiometer', 'Screening auditivo orientativo con tonos puros, audiograma relativo e historial de pruebas.', 1, 1, 15),
                   ('qvoice', 'Qvoice', 'Solucion orientada al seguimiento de la voz humana en entornos laborales.', 1, 1, 20),
                   ('smart_tales', 'Smart Tales', 'Cuentos personalizados con voces familiares, perfiles infantiles e historial narrativo.', 1, 1, 30)
                 ON DUPLICATE KEY UPDATE
@@ -339,6 +342,10 @@ def main() -> None:
                   SELECT 'audioprint' AS product_code, 'admin' AS code, 'Admin' AS name, 'Gestion de la solucion, usuarios e historial.' AS description
                   UNION ALL
                   SELECT 'audioprint', 'user', 'User', 'Uso normal de la solución y gestión de sus propios audios.'
+                  UNION ALL
+                  SELECT 'audiometer', 'admin', 'Admin', 'Gestion del producto, usuarios e historial.'
+                  UNION ALL
+                  SELECT 'audiometer', 'user', 'User', 'Uso normal del screening auditivo y gestión de sus propias pruebas.'
                   UNION ALL
                   SELECT 'qvoice', 'admin', 'Admin', 'Gestion de accesos y configuracion inicial de la solucion.'
                   UNION ALL

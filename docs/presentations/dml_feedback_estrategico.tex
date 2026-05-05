@@ -1,0 +1,390 @@
+\documentclass[10pt,aspectratio=169]{beamer}
+
+\usetheme{Madrid}
+\usecolortheme{seahorse}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}{%
+  \hfill\scriptsize\color{DMLMuted}\insertframenumber/\inserttotalframenumber\hspace{0.35cm}\vspace{0.18cm}
+}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{hyperref}
+
+\definecolor{DMLInk}{RGB}{15,23,42}
+\definecolor{DMLMuted}{RGB}{71,85,105}
+\definecolor{DMLSoft}{RGB}{248,250,252}
+\definecolor{DMLLine}{RGB}{203,213,225}
+\definecolor{DMLGreen}{RGB}{22,101,52}
+\definecolor{DMLBlue}{RGB}{29,78,216}
+\definecolor{DMLBeamerBlue}{RGB}{35,74,145}
+\definecolor{DMLGold}{RGB}{146,64,14}
+\definecolor{DMLRed}{RGB}{153,27,27}
+
+\setbeamercolor{normal text}{fg=DMLInk,bg=white}
+\setbeamercolor{frametitle}{fg=white,bg=DMLBeamerBlue}
+\setbeamercolor{title}{fg=DMLBeamerBlue}
+\setbeamercolor{subtitle}{fg=DMLInk}
+\setbeamercolor{structure}{fg=DMLBeamerBlue}
+\setbeamercolor{palette primary}{fg=white,bg=DMLBeamerBlue}
+\setbeamercolor{palette secondary}{fg=white,bg=DMLBlue}
+\setbeamercolor{palette tertiary}{fg=white,bg=DMLBeamerBlue}
+\setbeamercolor{block title}{fg=white,bg=DMLBeamerBlue}
+\setbeamercolor{block body}{fg=DMLInk,bg=DMLSoft}
+\setbeamerfont{frametitle}{series=\bfseries,size=\Large}
+\setbeamerfont{title}{series=\bfseries,size=\Huge}
+\setbeamerfont{subtitle}{size=\large}
+
+\newcommand{\DMLEyebrow}[1]{%
+  {\scriptsize\bfseries\color{DMLGreen}#1}\vspace{0.08cm}
+}
+
+\newcommand{\DMLBox}[1]{%
+  \begin{tikzpicture}
+    \node[
+      draw=DMLLine,
+      fill=DMLSoft,
+      rounded corners=2pt,
+      inner sep=8pt,
+      text width=0.84\textwidth,
+      align=left
+    ] {\large #1};
+  \end{tikzpicture}
+}
+
+\newcommand{\DMLSmallBox}[1]{%
+  \begin{tikzpicture}
+    \node[
+      draw=DMLLine,
+      fill=DMLSoft,
+      rounded corners=2pt,
+      inner sep=7pt,
+      text width=0.86\linewidth,
+      align=left
+    ] {\small #1};
+  \end{tikzpicture}
+}
+
+\newcommand{\DMLCard}[3]{%
+  \begin{tikzpicture}
+    \node[
+      draw=#1!50,
+      fill=#1!5,
+      rounded corners=2pt,
+      inner sep=7pt,
+      text width=0.86\linewidth,
+      minimum height=1.95cm,
+      align=left
+    ] {\textbf{\color{#1}#2}\par\vspace{0.08cm}{\small #3}};
+  \end{tikzpicture}
+}
+
+\newcommand{\DMLMetric}[3]{%
+  \begin{tikzpicture}
+    \node[
+      draw=#1!45,
+      fill=#1!6,
+      rounded corners=2pt,
+      inner sep=8pt,
+      text width=0.86\linewidth,
+      minimum height=1.42cm,
+      align=left
+    ] {{\Large\bfseries\color{#1}#2}\par{\scriptsize #3}};
+  \end{tikzpicture}
+}
+
+\newcommand{\DMLImage}[2]{%
+  \IfFileExists{images/#1}{%
+    \includegraphics[width=\linewidth,height=0.48\textheight,keepaspectratio]{images/#1}
+  }{%
+    \begin{tikzpicture}
+      \node[
+        draw=DMLLine,
+        fill=DMLSoft,
+        rounded corners=2pt,
+        minimum width=\linewidth,
+        minimum height=0.44\textheight,
+        align=center,
+        inner sep=10pt,
+        text width=0.76\linewidth
+      ] {\color{DMLMuted}\textbf{Imagen sugerida}\par\vspace{0.2cm}#2\par\vspace{0.25cm}{\scriptsize Generar y guardar como \texttt{\detokenize{#1}}}};
+    \end{tikzpicture}
+  }
+}
+
+\title{d-ml}
+\subtitle{Digital Machine Listening aplicado al audio clínico}
+\author{Mario Fernando Jojoa Acosta}
+\date{Conversación estratégica con el Dr. Cantón · Mayo 2026}
+
+\begin{document}
+
+% 1
+\begin{frame}[plain]
+  \vspace{0.05cm}
+  \begin{center}
+    \DMLImage{01_sound_to_evidence.png}{Audio clínico transformándose en evidencia y datos.}
+  \end{center}
+  \vspace{-0.10cm}
+  {\Huge\bfseries d-ml\par}
+  \vspace{0.12cm}
+  {\Large Digital Machine Listening: convierte sonidos clínicos —voz, pulmón y corazón— en datos accionables.\par}
+  \vspace{0.22cm}
+  {\small Mario Fernando Jojoa Acosta · Senior Research Engineer, Barcelona Supercomputing Center · \url{https://www.d-ml.eu}}
+\end{frame}
+
+% 2
+\begin{frame}{Agenda de conversación}
+  \DMLEyebrow{RUTA PROPUESTA · 15 MIN}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLBlue}{1. Contexto clínico}{Problema, evidencia publicada y verticales iniciales.\\[0.12cm]{\scriptsize 5 min}}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLGreen}{2. Plataforma y prototipo}{Solución, arquitectura, módulos actuales y despliegue clínico.\\[0.12cm]{\scriptsize 6 min}}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLGold}{3. Ruta estratégica}{Encaje BSC, validación y próximos 90 días.\\[0.12cm]{\scriptsize 4 min}}
+    \end{column}
+  \end{columns}
+  \vspace{0.35cm}
+  \DMLBox{\textbf{Digital Machine Listening:} convierte sonidos clínicos —voz, pulmón y corazón— en datos trazables, comparables y preparados para investigación, seguimiento e IA.}
+\end{frame}
+
+% 3
+\begin{frame}{Problema clínico}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.50\textwidth}
+      \DMLEyebrow{AUDIO CON VALOR, DATOS SIN ESTRUCTURA}
+      \begin{itemize}
+        \item Voz, tos, respiración y auscultación contienen información longitudinal.
+        \item En la práctica, la captura suele depender del dispositivo, ruido, distancia y operador.
+        \item Muchos audios quedan como archivos aislados, sin metadatos ni trazabilidad.
+        \item Sin calidad y contexto, es difícil construir evidencia o entrenar modelos confiables.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \DMLImage{05_health_audio_triade.png}{Voz, pulmón y corazón conectados por ondas de sonido.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 4
+\begin{frame}{Evidencia que abre la oportunidad}
+  \DMLEyebrow{SEÑALES CLÍNICAS AUDIBLES}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLGold}{Corazón}{En un estudio en atención primaria, la auscultación tuvo sensibilidad de 44\% para enfermedad valvular significativa y 32\% para enfermedad leve.\textsuperscript{[1]}}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLGreen}{Pulmón}{Un metaanálisis de análisis computarizado de sonidos pulmonares reportó sensibilidad de 80\% y especificidad de 85\% para detectar sibilancias o crepitantes.\textsuperscript{[2]}}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLBlue}{Voz}{Revisiones en Parkinson muestran cambios acústicos medibles, incluyendo jitter y shimmer, y describen la voz como un posible fenotipo digital.\textsuperscript{[3,4]}}
+    \end{column}
+  \end{columns}
+  \vspace{0.30cm}
+  \DMLBox{La oportunidad no es sustituir al clínico: es capturar mejor, medir de forma reproducible y crear datos longitudinales que hoy se pierden.}
+\end{frame}
+
+% 5
+\begin{frame}{La oportunidad clínica}
+  \DMLEyebrow{TRES VERTICALES INICIALES}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLBlue}{Voz}{Disfonía, fatiga vocal, seguimiento de patologías, habla espontánea, lectura guiada y datos en español.\textsuperscript{[3,4]}}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLGreen}{Pulmón}{Tos, respiración, sibilancias, crepitantes, calidad de auscultación y seguimiento respiratorio.\textsuperscript{[2,5]}}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLGold}{Corazón}{Soplos, ritmo, calidad de señal, auscultación digital y apoyo a investigación clínica.\textsuperscript{[1,6]}}
+    \end{column}
+  \end{columns}
+  \vspace{0.32cm}
+  \DMLBox{Primer posicionamiento recomendado: investigación, seguimiento y soporte no diagnóstico, evitando afirmaciones médicas prematuras.}
+\end{frame}
+
+% 5
+\begin{frame}{Solución propuesta}
+  \DMLEyebrow{PLATAFORMA CLÍNICA MODULAR}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLGreen}{Captura guiada}{Protocolos, consentimiento, dispositivo, contexto clínico, ruido y control de calidad.}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLBlue}{Análisis reproducible}{Productos sobre una base común: métricas, artefactos, tablas, gráficas e histórico.}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLGold}{Datos para IA}{Datasets comparables, metadatos, trazabilidad, gobernanza y preparación para modelos futuros.}
+    \end{column}
+  \end{columns}
+  \vspace{0.28cm}
+  \DMLBox{La idea no es vender una prueba aislada: es construir la capa de infraestructura para productos clínicos basados en señales audibles.}
+\end{frame}
+
+% 6
+\begin{frame}{Lo construido hasta ahora}
+  \DMLEyebrow{PROTOTIPO FUNCIONAL}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.31\textwidth}
+      \DMLMetric{DMLGreen}{Portal}{Login, sesiones, usuarios, organizaciones y roles por producto.}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \DMLMetric{DMLBlue}{2 módulos}{Audioprint y Audiometer ya funcionan como productos.}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \DMLMetric{DMLGold}{Cobro base}{Coins por producto, saldo por usuario y ledger auditable.}
+    \end{column}
+  \end{columns}
+  \vspace{0.28cm}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.48\textwidth}
+      \DMLCard{DMLBlue}{Audioprint}{Entrada general para analizar audio, extraer features, conservar artefactos y construir histórico.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \DMLCard{DMLGold}{Audiometer}{Screening auditivo orientativo con tonos, reporte visual, histórico y consumo controlado.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 7
+\begin{frame}{Arquitectura del flujo clínico}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.52\textwidth}
+      \DMLEyebrow{DE CAPTURA A EVIDENCIA}
+      \begin{enumerate}
+        \item Paciente, contexto, consentimiento y organización.
+        \item Captura o subida de audio con metadatos.
+        \item Control de calidad y repetición si la señal no sirve.
+        \item Análisis por producto clínico.
+        \item Reporte, histórico y comparación longitudinal.
+        \item Dataset gobernado para investigación/modelos.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \DMLImage{04_platform_architecture.png}{Diagrama de plataforma clínica modular.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 8
+\begin{frame}{Siguiente producto: asistente de voz clínico}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.52\textwidth}
+      \DMLEyebrow{CAPTURA CLÍNICA EN TIEMPO REAL}
+      \begin{itemize}
+        \item Guía protocolos de voz, tos, respiración o fonación.
+        \item Valida ruido, intensidad, duración y distancia al micrófono.
+        \item Extrae marcadores acústicos: tono, energía, pausas, prosodia, formantes y estabilidad.
+        \item Permite seguimiento longitudinal y datasets comparables en español.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \DMLImage{06_voice_assistant_clinical.png}{Asistente de voz clínico capturando audio en tiempo real.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 9
+\begin{frame}{Modelo de despliegue clínico}
+  \DMLEyebrow{PILOTOS CONTROLADOS Y ESCALABLES}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLGreen}{Organizaciones}{Clínicas, servicios, laboratorios o grupos de investigación con usuarios y admins propios.}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLBlue}{Coins por uso}{Cada análisis consume créditos por producto: facilita pilotos, control de coste y futura compra.}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLGold}{Gobernanza}{Separación por contexto, histórico, trazabilidad y borrado de datos asociados al usuario.}
+    \end{column}
+  \end{columns}
+  \vspace{0.30cm}
+  \DMLBox{La plataforma ya está pensada para pilotos multi-organización y para evolucionar hacia planes, compra de créditos y servicios de análisis.}
+\end{frame}
+
+% 10
+\begin{frame}{Una plataforma, otras aplicaciones}
+  \DMLEyebrow{FUERA DEL FOCO INICIAL}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.45\textwidth}
+      \DMLImage{03_audible_signals_map.png}{Mapa de señales audibles aplicables más allá de salud.}
+    \end{column}
+    \begin{column}{0.51\textwidth}
+      \begin{itemize}
+        \item Monitorización de máquinas y mantenimiento predictivo.
+        \item Audio ambiental y eventos acústicos.
+        \item Seguridad operacional y detección de anomalías sonoras.
+        \item Calidad de procesos donde el sonido es una huella medible.
+      \end{itemize}
+      \vspace{0.20cm}
+      \DMLSmallBox{\textbf{Alcance:} estas aplicaciones demuestran amplitud, pero la presentación y el primer negocio deben concentrarse en salud.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 11
+\begin{frame}{Por que puede encajar con BSC}
+  \DMLEyebrow{IA, SALUD DIGITAL, DATOS Y TRANSFERENCIA}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLBlue}{IA + HPC}{Pipelines reproducibles, entrenamiento, inferencia, escalado y análisis multimodal.}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLGreen}{Rigor clínico}{Protocolos, colaboraciones, privacidad, sesgos, validación y evaluación responsable.}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \DMLCard{DMLGold}{Transferencia}{Transformar prototipo en activo tecnológico: pilotos, IP, partners y modelo de explotación.}
+    \end{column}
+  \end{columns}
+  \vspace{0.32cm}
+  \DMLBox{La pregunta no es solo técnica: qué ruta transforma el prototipo en evidencia clínica, producto y oportunidad real.}
+\end{frame}
+
+% 12
+\begin{frame}{Próxima decisión estratégica}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.52\textwidth}
+      \DMLEyebrow{DECISIONES CRÍTICAS}
+      \begin{enumerate}
+        \item ¿Qué vertical clínica debería priorizarse primero?
+        \item ¿Qué piloto mínimo daría evidencia en 90 días?
+        \item ¿Qué colaboradores clínicos o internos deberían verlo?
+        \item ¿Qué ruta parece más viable: BSC, transferencia o spin-off?
+        \item ¿Qué no debería construirse antes de validar?
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \DMLEyebrow{PROPUESTA 90 DÍAS}
+      \begin{itemize}
+        \item Elegir una vertical: voz, pulmón o corazón.
+        \item Definir protocolo y consentimiento.
+        \item Ejecutar piloto pequeño con organización controlada.
+        \item Producir dataset inicial con gobernanza clara.
+        \item Decidir ruta institucional o emprendedora.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Referencias seleccionadas}
+  \tiny
+  \begin{enumerate}
+    \item Gardezi SKM et al. \textit{Cardiac auscultation poorly predicts the presence of valvular heart disease in asymptomatic primary care patients}. Heart. 2018. doi:10.1136/heartjnl-2018-313082.
+    \item Gurung A et al. \textit{Computerized lung sound analysis as diagnostic aid for the detection of abnormal lung sounds: a systematic review and meta-analysis}. Respiratory Medicine. 2011. doi:10.1016/j.rmed.2011.05.007.
+    \item Chiaramonte R, Bonfiglio M. \textit{Acoustic analysis of voice in Parkinson's disease: a systematic review and meta-analysis}. Revista de Neurología. 2020. doi:10.33588/rn.7011.2019414.
+    \item Tracy JM et al. \textit{Investigating voice as a biomarker: Deep phenotyping methods for early detection of Parkinson's disease}. Journal of Biomedical Informatics. 2020. doi:10.1016/j.jbi.2019.103362.
+    \item Landry V et al. \textit{Audio-based digital biomarkers in diagnosing and managing respiratory diseases: a systematic review and bibliometric analysis}. European Respiratory Review. 2025. doi:10.1183/16000617.0246-2024.
+    \item Chorba JS et al. \textit{Deep learning algorithm for automated cardiac murmur detection via a digital stethoscope platform}. Journal of the American Heart Association. 2021. doi:10.1161/JAHA.120.019905.
+  \end{enumerate}
+  \vspace{0.25cm}
+  {\scriptsize Estas referencias orientan la oportunidad clínica; d-ml se plantea inicialmente como plataforma de investigación, seguimiento y soporte no diagnóstico.}
+\end{frame}
+
+\end{document}

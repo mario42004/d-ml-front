@@ -21,3 +21,10 @@ storage/**
 *.pem
 *.key
 *.crt
+
+# LaTeX build artifacts
+*.aux
+*.nav
+*.out
+*.snm
+*.toc

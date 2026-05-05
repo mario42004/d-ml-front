@@ -35,6 +35,7 @@ function render_app_header(string $title): void
     $user = current_user();
     $tabs = current_product_tabs();
     $productName = $user['current_product_name'] ?? 'Portal de trabajo';
+    $organizationName = $user['current_organization_name'] ?? null;
     ?>
 <!doctype html>
 <html lang="es">
@@ -52,13 +53,21 @@ function render_app_header(string $title): void
         <span class="brand-mark">d/ml</span>
         <span class="brand-copy">
           <span>d-ml</span>
-          <small><?= htmlspecialchars((string) $productName, ENT_QUOTES, 'UTF-8') ?></small>
+          <small>Digital Machine Listening</small>
+          <small>www.d-ml.eu</small>
+          <small><?= htmlspecialchars(trim((string) $productName . ($organizationName ? ' · ' . (string) $organizationName : '')), ENT_QUOTES, 'UTF-8') ?></small>
         </span>
       </a>
       <nav class="nav">
         <?php foreach ($tabs as $tab): ?>
-          <a class="pill" href="<?= htmlspecialchars(dashboard_url_for_role((string) $tab['role_code'], (string) $tab['product_code']), ENT_QUOTES, 'UTF-8') ?>">
-            <?= htmlspecialchars((string) $tab['product_name'], ENT_QUOTES, 'UTF-8') ?>
+          <?php
+            $tabUrl = product_dashboard_path((string) $tab['product_code']) ?? '/dashboard.php';
+            if ($tabUrl !== '/dashboard.php') {
+                $tabUrl .= '?org_id=' . (int) $tab['organization_id'];
+            }
+          ?>
+          <a class="pill" href="<?= htmlspecialchars($tabUrl, ENT_QUOTES, 'UTF-8') ?>">
+            <?= htmlspecialchars((string) $tab['product_name'] . ' · ' . (string) $tab['organization_name'], ENT_QUOTES, 'UTF-8') ?>
           </a>
         <?php endforeach; ?>
         <?php if ($user !== null): ?>

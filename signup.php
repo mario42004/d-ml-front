@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($password !== $passwordConfirm) {
         $error = 'Las contraseñas no coinciden.';
     } else {
-        $result = register_user($form['first_name'], $form['last_name'], $form['email'], $password, $productCode, ['user']);
+        $result = register_user($form['first_name'], $form['last_name'], $form['email'], $password, $productCode, ['user'], (int) default_organization()['id']);
         if ($result['ok'] === true) {
             $success = 'Cuenta creada correctamente. Ya puedes iniciar sesión.';
             $form = ['first_name' => '', 'last_name' => '', 'email' => ''];

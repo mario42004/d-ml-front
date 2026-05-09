@@ -690,13 +690,12 @@ render_app_header('Vibrations | Análisis DATS');
               <?php
                 $phenomenonJobs = $jobsByPhenomenon[(int) $phenomenon['id']] ?? [];
                 $latestJob = $phenomenonJobs[0] ?? null;
-                $completedCount = count(array_filter($phenomenonJobs, static fn(array $job): bool => ($job['status'] ?? '') === 'completed'));
               ?>
               <tr>
                 <td><strong><?= htmlspecialchars((string) $phenomenon['name'], ENT_QUOTES, 'UTF-8') ?></strong></td>
                 <td><?= htmlspecialchars((string) (($phenomenon['external_id'] ?? '') !== '' ? $phenomenon['external_id'] : 'n/d'), ENT_QUOTES, 'UTF-8') ?></td>
                 <td><?= htmlspecialchars((string) (($phenomenon['description'] ?? '') !== '' ? $phenomenon['description'] : 'Sin descripción'), ENT_QUOTES, 'UTF-8') ?></td>
-                <td><?= count($phenomenonJobs) ?> recientes / <?= $completedCount ?> completas</td>
+                <td><?= count($phenomenonJobs) ?></td>
                 <td>
                   <?= ((int) ($phenomenon['baseline_job_id'] ?? 0)) > 0
                       ? 'Captura #' . (int) $phenomenon['baseline_job_id']

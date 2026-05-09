@@ -647,8 +647,8 @@ render_app_header('Vibrations | Análisis DATS');
         </div>
 
         <?php if ($topDifferences !== []): ?>
-          <div class="table-wrap">
-            <table class="vibrations-comparison-table">
+          <div class="table-shell">
+            <table class="users-table vibrations-comparison-table">
               <thead>
                 <tr>
                   <th>Métrica con mayor cambio</th>
@@ -746,8 +746,8 @@ render_app_header('Vibrations | Análisis DATS');
         <span>Crea el primero al cargar un archivo DATS.</span>
       </div>
     <?php else: ?>
-      <div class="table-wrap">
-        <table>
+      <div class="table-shell">
+        <table class="users-table">
           <thead>
             <tr>
               <th>Fenómeno</th>
@@ -908,8 +908,8 @@ render_app_header('Vibrations | Análisis DATS');
                   : null;
               $distanceStatus = vibrations_control_status($distanceValue);
             ?>
-            <div class="table-wrap">
-              <table class="vibrations-comparison-table">
+            <div class="table-shell">
+              <table class="users-table vibrations-comparison-table">
                 <thead>
                   <tr>
                     <th>Métrica de control</th>
@@ -1015,8 +1015,8 @@ render_app_header('Vibrations | Análisis DATS');
   <article class="card">
     <span class="section-tag">Historial</span>
     <h2>Capturas de <?= htmlspecialchars((string) $selectedPhenomenon['name'], ENT_QUOTES, 'UTF-8') ?></h2>
-    <div class="table-wrap">
-      <table>
+    <div class="table-shell">
+      <table class="users-table">
         <thead>
           <tr>
             <th>Fecha</th>
@@ -1076,8 +1076,8 @@ render_app_header('Vibrations | Análisis DATS');
     <article class="card">
       <span class="section-tag">Admin</span>
       <h2>Últimos análisis de este fenómeno</h2>
-      <div class="table-wrap">
-        <table>
+      <div class="table-shell">
+        <table class="users-table">
           <thead>
             <tr>
               <th>Fecha</th>

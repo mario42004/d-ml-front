@@ -581,9 +581,9 @@
   justify-content: center;
   min-height: 4.25rem;
   padding: 0.75rem 0.85rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid rgba(255, 199, 77, 0.08);
   border-radius: 8px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.045);
   color: var(--color-muted);
   font-size: 0.82rem;
   line-height: 1.35;
@@ -593,7 +593,7 @@
   display: inline-flex;
   width: fit-content;
   margin-bottom: 0.18rem;
-  color: var(--color-text);
+  color: #fff6e7;
   font-size: 1rem;
 }
 
@@ -612,32 +612,40 @@
 .vibrations-control-status {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 2rem;
   padding: 0.32rem 0.55rem;
-  border-radius: 999px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   font-size: 0.78rem;
   font-weight: 800;
-  white-space: nowrap;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .vibrations-control-status.is-stable {
-  background: rgba(20, 184, 166, 0.16);
-  color: #0f766e;
+  background: rgba(70, 199, 151, 0.08);
+  border-color: rgba(70, 199, 151, 0.2);
+  color: #bdf0db;
 }
 
 .vibrations-control-status.is-medium {
-  background: rgba(245, 158, 11, 0.18);
-  color: #92400e;
+  background: rgba(255, 199, 77, 0.1);
+  border-color: rgba(255, 199, 77, 0.22);
+  color: #ffe0a3;
 }
 
 .vibrations-control-status.is-high {
-  background: rgba(239, 68, 68, 0.16);
-  color: #991b1b;
+  background: rgba(255, 134, 104, 0.08);
+  border-color: rgba(255, 134, 104, 0.2);
+  color: #ffd2c7;
 }
 
 .vibrations-control-status.is-muted {
-  background: rgba(100, 116, 139, 0.14);
-  color: #475569;
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--color-muted);
 }
 
 .audiometer-layout {

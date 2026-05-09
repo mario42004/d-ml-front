@@ -113,6 +113,125 @@ if ($selectedJobId > 0) {
 $completedJobs = count(array_filter($jobs, static fn(array $job): bool => ($job['status'] ?? '') === 'completed'));
 $failedJobs = count(array_filter($jobs, static fn(array $job): bool => ($job['status'] ?? '') === 'failed'));
 $baselineJobs = count(array_filter($jobs, static fn(array $job): bool => (int) ($job['is_baseline'] ?? 0) === 1));
+
+function vibrations_output_metrics_csv(array $analysis, string $filename): never
+{
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+
+    $output = fopen('php://output', 'wb');
+    if ($output === false) {
+        exit;
+    }
+
+    fwrite($output, "\xEF\xBB\xBF");
+    fputcsv($output, ['grupo', 'métrica', 'clave', 'valor', 'unidad', 'descripción', 'fuente']);
+    foreach (vibrations_metric_rows_from_analysis($analysis) as $row) {
+        fputcsv($output, [
+            $row['metric_group_label'] ?? '',
+            $row['metric_label'] ?? '',
+            $row['metric_key'] ?? '',
+            $row['metric_value_text'] ?? '',
+            $row['unit'] ?? '',
+            $row['description'] ?? '',
+            $row['source_path'] ?? '',
+        ]);
+    }
+
+    fclose($output);
+    exit;
+}
+
+function vibrations_scalar_csv_value(mixed $value): string
+{
+    if (is_bool($value)) {
+        return $value ? '1' : '0';
+    }
+
+    if (is_scalar($value) || $value === null) {
+        return (string) $value;
+    }
+
+    return (string) json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+}
+
+function vibrations_output_windows_csv(array $analysis, string $filename): never
+{
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+
+    $output = fopen('php://output', 'wb');
+    if ($output === false) {
+        exit;
+    }
+
+    fwrite($output, "\xEF\xBB\xBF");
+    $baseColumns = [
+        'ventana',
+        'inicio_s',
+        'fin_s',
+        'sensor',
+    ];
+
+    $payloadKeys = [];
+    $rows = [];
+    $windows = is_array($analysis['windows'] ?? null) ? $analysis['windows'] : [];
+    foreach ($windows as $window) {
+        if (!is_array($window)) {
+            continue;
+        }
+
+        $sensors = is_array($window['sensors'] ?? null) ? $window['sensors'] : [];
+        foreach ($sensors as $sensorName => $sensorPayload) {
+            if (!is_array($sensorPayload)) {
+                continue;
+            }
+
+            foreach (array_keys($sensorPayload) as $key) {
+                $key = (string) $key;
+                if (!in_array($key, $payloadKeys, true)) {
+                    $payloadKeys[] = $key;
+                }
+            }
+
+            $rows[] = [
+                'base' => [
+                    vibrations_scalar_csv_value($window['index'] ?? ''),
+                    vibrations_scalar_csv_value($window['start_seconds'] ?? ''),
+                    vibrations_scalar_csv_value($window['end_seconds'] ?? ''),
+                    (string) $sensorName,
+                ],
+                'payload' => $sensorPayload,
+            ];
+        }
+    }
+
+    fputcsv($output, [...$baseColumns, ...$payloadKeys]);
+    foreach ($rows as $row) {
+        $payload = is_array($row['payload'] ?? null) ? $row['payload'] : [];
+        $csvRow = is_array($row['base'] ?? null) ? $row['base'] : [];
+        foreach ($payloadKeys as $key) {
+            $csvRow[] = vibrations_scalar_csv_value($payload[$key] ?? '');
+        }
+        fputcsv($output, $csvRow);
+    }
+
+    fclose($output);
+    exit;
+}
+
+if ($selectedJob !== null && $selectedAnalysis !== null) {
+    $download = (string) ($_GET['download'] ?? '');
+    if ($download === 'metrics_csv') {
+        vibrations_output_metrics_csv($selectedAnalysis, 'vibrations_metricas_' . (int) $selectedJob['id'] . '.csv');
+    }
+    if ($download === 'windows_csv') {
+        vibrations_output_windows_csv($selectedAnalysis, 'vibrations_ventanas_' . (int) $selectedJob['id'] . '.csv');
+    }
+}
+
 $csrfToken = csrf_token();
 
 render_app_header('Vibrations | Análisis DATS');
@@ -174,11 +293,23 @@ render_app_header('Vibrations | Análisis DATS');
     <article class="card" id="vibrations-report">
       <div class="section-heading">
         <div>
-          <span class="section-tag">Reporte</span>
+          <span class="section-tag">Análisis</span>
           <h2><?= htmlspecialchars((string) ($selectedJob['phenomenon_label'] ?: $selectedJob['original_filename']), ENT_QUOTES, 'UTF-8') ?></h2>
-          <p><?= htmlspecialchars((string) $selectedJob['original_filename'], ENT_QUOTES, 'UTF-8') ?></p>
+          <p>Este bloque se abre bajo demanda desde el historial. Muestra el resumen del fenómeno, las visuales principales y deja las métricas completas como archivos descargables.</p>
         </div>
-        <a class="button-secondary" href="/portal/vibrations.php">Cerrar reporte</a>
+        <div class="table-actions">
+          <a class="button-secondary" href="/portal/vibrations.php?job_id=<?= (int) $selectedJob['id'] ?>&download=metrics_csv">Descargar métricas CSV</a>
+          <a class="button-secondary" href="/portal/vibrations.php?job_id=<?= (int) $selectedJob['id'] ?>&download=windows_csv">Descargar ventanas CSV</a>
+          <?php if (((int) ($selectedJob['is_baseline'] ?? 0)) !== 1): ?>
+            <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('¿Reemplazar el baseline de este fenómeno por este análisis?');">
+              <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+              <input type="hidden" name="action" value="set_baseline">
+              <input type="hidden" name="job_id" value="<?= (int) $selectedJob['id'] ?>">
+              <button class="button" type="submit">Usar como baseline</button>
+            </form>
+          <?php endif; ?>
+          <a class="button-secondary" href="/portal/vibrations.php">Cerrar análisis</a>
+        </div>
       </div>
 
       <div class="audioprint-summary-grid">
@@ -259,34 +390,22 @@ render_app_header('Vibrations | Análisis DATS');
         </div>
       <?php endif; ?>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Sensor</th>
-              <th>Muestras</th>
-              <th>Frecuencia</th>
-              <th>RMS dinámico</th>
-              <th>Pico dinámico</th>
-              <th>Jerk RMS</th>
-              <th>Frecuencia dominante</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php foreach ($sensors as $sensor): ?>
-              <?php $sensor = (string) $sensor; ?>
-              <tr>
-                <td><?= htmlspecialchars($sensor, ENT_QUOTES, 'UTF-8') ?></td>
-                <td><?= htmlspecialchars(vibrations_format_value(vibrations_analysis_stat($selectedAnalysis, $sensor, 'sample_count')), ENT_QUOTES, 'UTF-8') ?></td>
-                <td><?= htmlspecialchars(vibrations_format_value(vibrations_analysis_stat($selectedAnalysis, $sensor, 'estimated_sample_rate_hz'), 'Hz'), ENT_QUOTES, 'UTF-8') ?></td>
-                <td><?= htmlspecialchars(vibrations_format_value(vibrations_analysis_stat($selectedAnalysis, $sensor, 'dynamic.rms')), ENT_QUOTES, 'UTF-8') ?></td>
-                <td><?= htmlspecialchars(vibrations_format_value(vibrations_analysis_stat($selectedAnalysis, $sensor, 'dynamic.peak_abs')), ENT_QUOTES, 'UTF-8') ?></td>
-                <td><?= htmlspecialchars(vibrations_format_value(vibrations_analysis_stat($selectedAnalysis, $sensor, 'jerk.rms')), ENT_QUOTES, 'UTF-8') ?></td>
-                <td><?= htmlspecialchars(vibrations_format_value(vibrations_analysis_stat($selectedAnalysis, $sensor, 'spectrum.dominant_frequency_hz'), 'Hz'), ENT_QUOTES, 'UTF-8') ?></td>
-              </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
+      <div class="audioprint-summary-grid">
+        <?php foreach ($sensors as $sensor): ?>
+          <?php $sensor = (string) $sensor; ?>
+          <article class="stat-card">
+            <strong><?= htmlspecialchars(vibrations_format_value(vibrations_analysis_stat($selectedAnalysis, $sensor, 'dynamic.rms')), ENT_QUOTES, 'UTF-8') ?></strong>
+            <span><?= htmlspecialchars($sensor, ENT_QUOTES, 'UTF-8') ?> RMS dinámico</span>
+          </article>
+          <article class="stat-card">
+            <strong><?= htmlspecialchars(vibrations_format_value(vibrations_analysis_stat($selectedAnalysis, $sensor, 'dynamic.peak_abs')), ENT_QUOTES, 'UTF-8') ?></strong>
+            <span><?= htmlspecialchars($sensor, ENT_QUOTES, 'UTF-8') ?> pico dinámico</span>
+          </article>
+          <article class="stat-card">
+            <strong><?= htmlspecialchars(vibrations_format_value(vibrations_analysis_stat($selectedAnalysis, $sensor, 'spectrum.dominant_frequency_hz'), 'Hz'), ENT_QUOTES, 'UTF-8') ?></strong>
+            <span><?= htmlspecialchars($sensor, ENT_QUOTES, 'UTF-8') ?> frecuencia dominante</span>
+          </article>
+        <?php endforeach; ?>
       </div>
 
       <?php if ($plots !== []): ?>
@@ -307,38 +426,9 @@ render_app_header('Vibrations | Análisis DATS');
         </div>
       <?php endif; ?>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Ventana</th>
-              <th>Inicio</th>
-              <th>Fin</th>
-              <th>Sensor</th>
-              <th>Score</th>
-              <th>Severidad</th>
-              <th>RMS dinámico</th>
-              <th>Pico</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php foreach (array_slice($windows, 0, 24) as $window): ?>
-              <?php foreach (($window['sensors'] ?? []) as $sensorName => $sensorPayload): ?>
-                <?php if (!is_array($sensorPayload)) { continue; } ?>
-                <tr>
-                  <td><?= (int) ($window['index'] ?? 0) ?></td>
-                  <td><?= htmlspecialchars(vibrations_format_value($window['start_seconds'] ?? null, 's'), ENT_QUOTES, 'UTF-8') ?></td>
-                  <td><?= htmlspecialchars(vibrations_format_value($window['end_seconds'] ?? null, 's'), ENT_QUOTES, 'UTF-8') ?></td>
-                  <td><?= htmlspecialchars((string) $sensorName, ENT_QUOTES, 'UTF-8') ?></td>
-                  <td><?= htmlspecialchars(vibrations_format_value($sensorPayload['change_score'] ?? null), ENT_QUOTES, 'UTF-8') ?></td>
-                  <td><?= htmlspecialchars((string) ($sensorPayload['severity'] ?? 'normal'), ENT_QUOTES, 'UTF-8') ?></td>
-                  <td><?= htmlspecialchars(vibrations_format_value($sensorPayload['dynamic_rms'] ?? null), ENT_QUOTES, 'UTF-8') ?></td>
-                  <td><?= htmlspecialchars(vibrations_format_value($sensorPayload['dynamic_peak_abs'] ?? null), ENT_QUOTES, 'UTF-8') ?></td>
-                </tr>
-              <?php endforeach; ?>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
+      <div class="helper">
+        <strong>Métricas por ventana</strong>
+        <span>Las métricas de cada ventana de observación están disponibles en el CSV de ventanas para análisis posterior sin saturar esta vista.</span>
       </div>
     </article>
   <?php endif; ?>
@@ -396,7 +486,17 @@ render_app_header('Vibrations | Análisis DATS');
                     <span><?= htmlspecialchars((string) $job['created_at'], ENT_QUOTES, 'UTF-8') ?></span>
                     <span><?= htmlspecialchars((string) $job['status'], ENT_QUOTES, 'UTF-8') ?></span>
                     <?php if (($job['status'] ?? '') === 'completed'): ?>
-                      <a href="/portal/vibrations.php?job_id=<?= (int) $job['id'] ?>#vibrations-report">Ver</a>
+                      <a href="/portal/vibrations.php?job_id=<?= (int) $job['id'] ?>#vibrations-report">Ver análisis</a>
+                      <?php if ((int) ($job['is_baseline'] ?? 0) !== 1): ?>
+                        <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('¿Reemplazar el baseline de este fenómeno por este análisis?');">
+                          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+                          <input type="hidden" name="action" value="set_baseline">
+                          <input type="hidden" name="job_id" value="<?= (int) $job['id'] ?>">
+                          <button class="button-secondary" type="submit">Baseline</button>
+                        </form>
+                      <?php else: ?>
+                        <span>Baseline actual</span>
+                      <?php endif; ?>
                     <?php endif; ?>
                   </div>
                 <?php endforeach; ?>
@@ -526,14 +626,16 @@ render_app_header('Vibrations | Análisis DATS');
               <td><?= htmlspecialchars((string) $job['status'], ENT_QUOTES, 'UTF-8') ?></td>
               <td class="table-actions">
                 <?php if (($job['status'] ?? '') === 'completed'): ?>
-                  <a class="button-secondary" href="/portal/vibrations.php?job_id=<?= (int) $job['id'] ?>#vibrations-report">Ver</a>
+                  <a class="button-secondary" href="/portal/vibrations.php?job_id=<?= (int) $job['id'] ?>#vibrations-report">Ver análisis</a>
                   <?php if ((int) ($job['is_baseline'] ?? 0) !== 1): ?>
-                    <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('¿Usar este análisis como baseline para este fenómeno?');">
+                    <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('¿Reemplazar el baseline de este fenómeno por este análisis?');">
                       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                       <input type="hidden" name="action" value="set_baseline">
                       <input type="hidden" name="job_id" value="<?= (int) $job['id'] ?>">
-                      <button class="button-secondary" type="submit">Baseline</button>
+                      <button class="button-secondary" type="submit">Usar como baseline</button>
                     </form>
+                  <?php else: ?>
+                    <span class="status-pill is-active">Baseline actual</span>
                   <?php endif; ?>
                 <?php endif; ?>
               </td>
@@ -580,14 +682,16 @@ render_app_header('Vibrations | Análisis DATS');
                 <td><?= htmlspecialchars((string) $job['status'], ENT_QUOTES, 'UTF-8') ?></td>
                 <td class="table-actions">
                   <?php if (($job['status'] ?? '') === 'completed'): ?>
-                    <a class="button-secondary" href="/portal/vibrations.php?job_id=<?= (int) $job['id'] ?>#vibrations-report">Ver</a>
+                    <a class="button-secondary" href="/portal/vibrations.php?job_id=<?= (int) $job['id'] ?>#vibrations-report">Ver análisis</a>
                     <?php if ((int) ($job['is_baseline'] ?? 0) !== 1): ?>
-                      <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('¿Usar este análisis como baseline para este fenómeno?');">
+                      <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('¿Reemplazar el baseline de este fenómeno por este análisis?');">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                         <input type="hidden" name="action" value="set_baseline">
                         <input type="hidden" name="job_id" value="<?= (int) $job['id'] ?>">
-                        <button class="button-secondary" type="submit">Baseline</button>
+                        <button class="button-secondary" type="submit">Usar como baseline</button>
                       </form>
+                    <?php else: ?>
+                      <span class="status-pill is-active">Baseline actual</span>
                     <?php endif; ?>
                   <?php endif; ?>
                   <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('¿Eliminar este análisis?');">

@@ -375,10 +375,14 @@
 
 .vibrations-mini-history div {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: 0.65rem;
   align-items: center;
   font-size: 0.86rem;
+}
+
+.vibrations-mini-history .inline-form {
+  margin: 0;
 }
 
 .vibrations-mini-history a {

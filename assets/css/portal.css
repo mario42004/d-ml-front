@@ -390,6 +390,15 @@
   font-weight: 800;
 }
 
+.vibrations-new-phenomenon {
+  display: grid;
+  gap: 1rem;
+}
+
+.vibrations-new-phenomenon.is-hidden {
+  display: none;
+}
+
 .audiometer-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);

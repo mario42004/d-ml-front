@@ -512,7 +512,7 @@ render_app_header('Vibrations | Análisis DATS');
     <article class="card">
       <span class="section-tag">Nuevo análisis</span>
       <h2>Cargar archivo DATS</h2>
-      <p>Selecciona el fenómeno observado antes de cargar la captura. Si es nuevo, deja el selector en crear y completa su identificación.</p>
+      <p>Selecciona el fenómeno observado antes de cargar la captura. Usa la opción de crear solo cuando estés registrando un fenómeno diferente.</p>
       <div class="coin-balance-strip">
         <strong><?= (int) $vibrationsCoins ?></strong>
         <span>coins disponibles para Vibrations</span>
@@ -526,30 +526,33 @@ render_app_header('Vibrations | Análisis DATS');
           <div>
             <label for="phenomenon_id">Fenómeno observado existente</label>
             <select id="phenomenon_id" name="phenomenon_id" <?= $vibrationsCoins > 0 ? '' : 'disabled' ?>>
-              <option value="0">Crear nuevo fenómeno</option>
               <?php foreach ($phenomena as $phenomenon): ?>
                 <option value="<?= (int) $phenomenon['id'] ?>">
                   <?= htmlspecialchars((string) $phenomenon['name'] . ((string) ($phenomenon['external_id'] ?? '') !== '' ? ' · ' . (string) $phenomenon['external_id'] : ''), ENT_QUOTES, 'UTF-8') ?>
                 </option>
               <?php endforeach; ?>
+              <option value="0">Crear nuevo fenómeno</option>
             </select>
+            <small class="field-help">Al seleccionar uno existente, la captura se suma a su historial y se compara con su baseline.</small>
           </div>
         <?php endif; ?>
 
+        <div id="new-phenomenon-fields" class="vibrations-new-phenomenon <?= $phenomena !== [] ? 'is-hidden' : '' ?>">
         <div class="form-grid two">
           <div>
             <label for="phenomenon_label">Nuevo fenómeno observado</label>
-            <input id="phenomenon_label" name="phenomenon_label" type="text" maxlength="190" placeholder="Motor, carro, bomba, estructura" <?= $vibrationsCoins > 0 ? '' : 'disabled' ?>>
+            <input id="phenomenon_label" name="phenomenon_label" type="text" maxlength="190" placeholder="Motor, carro, bomba, estructura" <?= $phenomena !== [] || $vibrationsCoins <= 0 ? 'disabled' : '' ?>>
           </div>
           <div>
             <label for="external_id">ID externo</label>
-            <input id="external_id" name="external_id" type="text" maxlength="120" placeholder="Equipo, activo o referencia" <?= $vibrationsCoins > 0 ? '' : 'disabled' ?>>
+            <input id="external_id" name="external_id" type="text" maxlength="120" placeholder="Equipo, activo o referencia" <?= $phenomena !== [] || $vibrationsCoins <= 0 ? 'disabled' : '' ?>>
           </div>
         </div>
 
         <div>
           <label for="phenomenon_description">Descripción del fenómeno</label>
-          <input id="phenomenon_description" name="phenomenon_description" type="text" maxlength="255" placeholder="Contexto, ubicación, montaje o condición de medición" <?= $vibrationsCoins > 0 ? '' : 'disabled' ?>>
+          <input id="phenomenon_description" name="phenomenon_description" type="text" maxlength="255" placeholder="Contexto, ubicación, montaje o condición de medición" <?= $phenomena !== [] || $vibrationsCoins <= 0 ? 'disabled' : '' ?>>
+        </div>
         </div>
 
         <div class="form-grid two">
@@ -709,4 +712,28 @@ render_app_header('Vibrations | Análisis DATS');
     </article>
   <?php endif; ?>
 </section>
+<script>
+(() => {
+  const select = document.getElementById('phenomenon_id');
+  const fields = document.getElementById('new-phenomenon-fields');
+  if (!select || !fields) {
+    return;
+  }
+
+  const inputs = fields.querySelectorAll('input, select, textarea');
+  const syncNewPhenomenonFields = () => {
+    const creating = select.value === '0';
+    fields.classList.toggle('is-hidden', !creating);
+    inputs.forEach((input) => {
+      input.disabled = !creating || select.disabled;
+      if (!creating && input instanceof HTMLInputElement) {
+        input.value = '';
+      }
+    });
+  };
+
+  select.addEventListener('change', syncNewPhenomenonFields);
+  syncNewPhenomenonFields();
+})();
+</script>
 <?php render_app_footer(); ?>

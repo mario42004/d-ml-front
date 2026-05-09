@@ -195,7 +195,33 @@ function vibrations_trend_points(array $jobs, array $definition): array
     return $points;
 }
 
-function vibrations_svg_polyline(array $points, ?float $baselineValue = null): string
+function vibrations_trend_summary_html(array $points, ?float $baselineValue, string $unit = ''): string
+{
+    if ($points === []) {
+        return '';
+    }
+
+    $latest = $points[array_key_last($points)];
+    $latestValue = (float) ($latest['value'] ?? 0.0);
+    $delta = $baselineValue === null ? null : $latestValue - $baselineValue;
+    $deltaPercent = null;
+    if ($delta !== null) {
+        $denominator = abs($baselineValue);
+        $deltaPercent = $denominator < 0.000001 ? null : ($delta / $denominator) * 100.0;
+    }
+
+    $deltaText = $delta === null
+        ? 'sin baseline'
+        : (($delta >= 0 ? '+' : '') . vibrations_format_value($delta, $unit) . ($deltaPercent === null ? '' : ' / ' . ($deltaPercent >= 0 ? '+' : '') . vibrations_format_value($deltaPercent, '%')));
+
+    return '<div class="vibrations-trend-stats">'
+        . '<span><strong>' . htmlspecialchars(vibrations_format_value($latestValue, $unit), ENT_QUOTES, 'UTF-8') . '</strong> último</span>'
+        . '<span><strong>' . htmlspecialchars($baselineValue === null ? 'n/d' : vibrations_format_value($baselineValue, $unit), ENT_QUOTES, 'UTF-8') . '</strong> baseline</span>'
+        . '<span><strong>' . htmlspecialchars($deltaText, ENT_QUOTES, 'UTF-8') . '</strong> desviación</span>'
+        . '</div>';
+}
+
+function vibrations_svg_polyline(array $points, ?float $baselineValue = null, string $scale = 'linear'): string
 {
     if ($points === []) {
         return '<div class="message is-success"><strong>Sin datos suficientes</strong><span>Sube más capturas completadas para ver la evolución.</span></div>';
@@ -206,15 +232,40 @@ function vibrations_svg_polyline(array $points, ?float $baselineValue = null): s
         $values[] = $baselineValue;
     }
 
-    $min = min($values);
-    $max = max($values);
+    $rawMin = min($values);
+    $rawMax = max($values);
+    $allNonNegative = $rawMin >= 0.0;
+    if ($allNonNegative) {
+        $rawMin = 0.0;
+    }
+    if (abs($rawMax - $rawMin) < 0.000001) {
+        if ($allNonNegative) {
+            $rawMax = max(1.0, $rawMax * 1.15);
+        } else {
+            $rawMin -= 1.0;
+            $rawMax += 1.0;
+        }
+    } elseif ($allNonNegative) {
+        $rawMax *= 1.08;
+    }
+
+    $transform = static function (float $value) use ($scale): float {
+        if ($scale === 'log') {
+            return log1p(max(0.0, $value));
+        }
+
+        return $value;
+    };
+
+    $plotValues = array_map($transform, [$rawMin, $rawMax]);
+    $min = min($plotValues);
+    $max = max($plotValues);
     if (abs($max - $min) < 0.000001) {
-        $min -= 1.0;
-        $max += 1.0;
+        $max = $min + 1.0;
     }
 
     $width = 520;
-    $height = 180;
+    $height = 150;
     $left = 38;
     $right = 16;
     $top = 16;
@@ -226,14 +277,15 @@ function vibrations_svg_polyline(array $points, ?float $baselineValue = null): s
     $coords = [];
     foreach ($points as $index => $point) {
         $x = $left + ($count === 1 ? $plotWidth / 2 : ($plotWidth * $index / ($count - 1)));
-        $ratio = ((float) $point['value'] - $min) / ($max - $min);
+        $plotValue = $transform((float) $point['value']);
+        $ratio = ($plotValue - $min) / ($max - $min);
         $y = $top + $plotHeight - ($ratio * $plotHeight);
         $coords[] = round($x, 2) . ',' . round($y, 2);
     }
 
     $baselineLine = '';
     if ($baselineValue !== null) {
-        $ratio = ($baselineValue - $min) / ($max - $min);
+        $ratio = ($transform($baselineValue) - $min) / ($max - $min);
         $baselineY = $top + $plotHeight - ($ratio * $plotHeight);
         $baselineLine = '<line class="vibrations-chart-baseline" x1="' . $left . '" y1="' . round($baselineY, 2) . '" x2="' . ($width - $right) . '" y2="' . round($baselineY, 2) . '"></line>';
     }
@@ -251,8 +303,8 @@ function vibrations_svg_polyline(array $points, ?float $baselineValue = null): s
         . $baselineLine
         . '<polyline class="vibrations-chart-line" points="' . htmlspecialchars(implode(' ', $coords), ENT_QUOTES, 'UTF-8') . '"></polyline>'
         . $dots
-        . '<text class="vibrations-chart-label" x="' . $left . '" y="' . ($height - 8) . '">' . htmlspecialchars(vibrations_format_value($min), ENT_QUOTES, 'UTF-8') . '</text>'
-        . '<text class="vibrations-chart-label" x="' . ($width - 112) . '" y="' . ($height - 8) . '">' . htmlspecialchars(vibrations_format_value($max), ENT_QUOTES, 'UTF-8') . '</text>'
+        . '<text class="vibrations-chart-label" x="' . $left . '" y="' . ($height - 8) . '">' . htmlspecialchars(vibrations_format_value($rawMin), ENT_QUOTES, 'UTF-8') . '</text>'
+        . '<text class="vibrations-chart-label" x="' . ($width - 132) . '" y="' . ($height - 8) . '">' . htmlspecialchars(vibrations_format_value($rawMax), ENT_QUOTES, 'UTF-8') . '</text>'
         . '</svg>';
 }
 
@@ -270,7 +322,7 @@ function vibrations_distance_svg(array $jobs): string
         ];
     }
 
-    return vibrations_svg_polyline($points, 0.0);
+    return vibrations_svg_polyline($points, 0.0, 'log');
 }
 
 function vibrations_scalar_csv_value(mixed $value): string
@@ -714,8 +766,17 @@ render_app_header('Vibrations | Análisis DATS');
             <div class="vibrations-trend-panel">
               <div>
                 <strong>Distancia al baseline</strong>
-                <span>0% representa el punto base; valores altos indican mayor desviación.</span>
+                <span>Escala suavizada para que los saltos grandes no aplasten el resto de la historia.</span>
               </div>
+              <?php
+                $distancePoints = [];
+                foreach (array_reverse($phenomenonJobs) as $job) {
+                    if (($job['status'] ?? '') === 'completed' && is_numeric($job['baseline_distance_score'] ?? null)) {
+                        $distancePoints[] = ['value' => (float) $job['baseline_distance_score']];
+                    }
+                }
+              ?>
+              <?= vibrations_trend_summary_html($distancePoints, 0.0, '%') ?>
               <?= vibrations_distance_svg($phenomenonJobs) ?>
             </div>
 
@@ -730,8 +791,9 @@ render_app_header('Vibrations | Análisis DATS');
                 <div class="vibrations-trend-panel">
                   <div>
                     <strong><?= htmlspecialchars((string) $definition['label'], ENT_QUOTES, 'UTF-8') ?></strong>
-                    <span><?= $baselineValue !== null ? 'Baseline: ' . htmlspecialchars(vibrations_format_value($baselineValue), ENT_QUOTES, 'UTF-8') : 'Define un baseline para comparar.' ?></span>
+                    <span><?= count($points) < 3 ? 'Tendencia inicial; se estabiliza al subir más capturas.' : 'Evolución histórica contra el punto base.' ?></span>
                   </div>
+                  <?= vibrations_trend_summary_html($points, $baselineValue) ?>
                   <?= vibrations_svg_polyline($points, $baselineValue) ?>
                 </div>
               <?php endforeach; ?>

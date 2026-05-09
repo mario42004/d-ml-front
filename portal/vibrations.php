@@ -660,8 +660,8 @@ render_app_header('Vibrations | Análisis DATS');
     <div class="section-heading">
       <div>
         <span class="section-tag">Fenómenos</span>
-        <h2>Fenómenos observados a tu cargo</h2>
-        <p>Cada fenómeno mantiene su propio historial, baseline y distancia de cambio. Las mediciones de un equipo no se mezclan con las de otro.</p>
+        <h2>Fenómenos monitoreados</h2>
+        <p>Panel de control de los fenómenos disponibles. Entra a uno para cargar capturas, revisar historial, fijar referencia y ver desviaciones.</p>
       </div>
     </div>
 
@@ -671,55 +671,50 @@ render_app_header('Vibrations | Análisis DATS');
         <span>Crea el primero al cargar un archivo DATS.</span>
       </div>
     <?php else: ?>
-      <div class="vibrations-phenomena-grid">
-        <?php foreach ($phenomena as $phenomenon): ?>
-          <?php
-            $phenomenonJobs = $jobsByPhenomenon[(int) $phenomenon['id']] ?? [];
-            $latestJob = $phenomenonJobs[0] ?? null;
-            $completedCount = count(array_filter($phenomenonJobs, static fn(array $job): bool => ($job['status'] ?? '') === 'completed'));
-          ?>
-          <article class="vibrations-phenomenon-card">
-            <div class="vibrations-phenomenon-head">
-              <div>
-                <strong><?= htmlspecialchars((string) $phenomenon['name'], ENT_QUOTES, 'UTF-8') ?></strong>
-                <?php if ((string) ($phenomenon['external_id'] ?? '') !== ''): ?>
-                  <span><?= htmlspecialchars((string) $phenomenon['external_id'], ENT_QUOTES, 'UTF-8') ?></span>
-                <?php endif; ?>
-              </div>
-              <span class="status-pill"><?= ((int) ($phenomenon['baseline_job_id'] ?? 0)) > 0 ? 'Baseline #' . (int) $phenomenon['baseline_job_id'] : 'Sin baseline' ?></span>
-            </div>
-
-            <?php if ((string) ($phenomenon['description'] ?? '') !== ''): ?>
-              <p><?= htmlspecialchars((string) $phenomenon['description'], ENT_QUOTES, 'UTF-8') ?></p>
-            <?php endif; ?>
-
-            <div class="vibrations-phenomenon-metrics">
-              <span><strong><?= count($phenomenonJobs) ?></strong> recientes</span>
-              <span><strong><?= $completedCount ?></strong> completos</span>
-              <span>
-                <strong><?= $latestJob !== null && is_numeric($latestJob['baseline_distance_score'] ?? null) ? htmlspecialchars(vibrations_format_value($latestJob['baseline_distance_score'], '%'), ENT_QUOTES, 'UTF-8') : 'n/d' ?></strong>
-                distancia
-              </span>
-            </div>
-
-            <?php if ($phenomenonJobs !== []): ?>
-              <div class="vibrations-mini-history">
-                <?php foreach ($phenomenonJobs as $job): ?>
-                  <div>
-                    <span><?= htmlspecialchars((string) $job['created_at'], ENT_QUOTES, 'UTF-8') ?></span>
-                    <span><?= htmlspecialchars((string) $job['status'], ENT_QUOTES, 'UTF-8') ?></span>
-                    <?php if (($job['status'] ?? '') === 'completed'): ?>
-                      <a href="/portal/vibrations.php?job_id=<?= (int) $job['id'] ?>#vibrations-report">Ver análisis</a>
-                    <?php endif; ?>
-                  </div>
-                <?php endforeach; ?>
-              </div>
-            <?php endif; ?>
-            <div class="table-actions">
-              <a class="button" href="/portal/vibrations.php?phenomenon_id=<?= (int) $phenomenon['id'] ?>#phenomenon-workspace">Estudiar fenómeno</a>
-            </div>
-          </article>
-        <?php endforeach; ?>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fenómeno</th>
+              <th>ID externo</th>
+              <th>Descripción</th>
+              <th>Capturas</th>
+              <th>Referencia</th>
+              <th>Distancia a referencia</th>
+              <th>Última captura</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($phenomena as $phenomenon): ?>
+              <?php
+                $phenomenonJobs = $jobsByPhenomenon[(int) $phenomenon['id']] ?? [];
+                $latestJob = $phenomenonJobs[0] ?? null;
+                $completedCount = count(array_filter($phenomenonJobs, static fn(array $job): bool => ($job['status'] ?? '') === 'completed'));
+              ?>
+              <tr>
+                <td><strong><?= htmlspecialchars((string) $phenomenon['name'], ENT_QUOTES, 'UTF-8') ?></strong></td>
+                <td><?= htmlspecialchars((string) (($phenomenon['external_id'] ?? '') !== '' ? $phenomenon['external_id'] : 'n/d'), ENT_QUOTES, 'UTF-8') ?></td>
+                <td><?= htmlspecialchars((string) (($phenomenon['description'] ?? '') !== '' ? $phenomenon['description'] : 'Sin descripción'), ENT_QUOTES, 'UTF-8') ?></td>
+                <td><?= count($phenomenonJobs) ?> recientes / <?= $completedCount ?> completas</td>
+                <td>
+                  <?= ((int) ($phenomenon['baseline_job_id'] ?? 0)) > 0
+                      ? 'Captura #' . (int) $phenomenon['baseline_job_id']
+                      : 'Sin referencia' ?>
+                </td>
+                <td>
+                  <?= $latestJob !== null && is_numeric($latestJob['baseline_distance_score'] ?? null)
+                      ? htmlspecialchars(vibrations_format_value($latestJob['baseline_distance_score'], '%'), ENT_QUOTES, 'UTF-8')
+                      : 'n/d' ?>
+                </td>
+                <td><?= $latestJob !== null ? htmlspecialchars((string) $latestJob['created_at'], ENT_QUOTES, 'UTF-8') : 'n/d' ?></td>
+                <td class="table-actions">
+                  <a class="button-secondary" href="/portal/vibrations.php?phenomenon_id=<?= (int) $phenomenon['id'] ?>#phenomenon-workspace">Estudiar</a>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
       </div>
     <?php endif; ?>
   </article>

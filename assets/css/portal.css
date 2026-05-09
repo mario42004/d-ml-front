@@ -402,15 +402,48 @@
 .vibrations-baseline-grid {
   display: grid;
   gap: 1rem;
+  margin-top: 1rem;
+}
+
+.vibrations-baseline-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.vibrations-baseline-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.vibrations-baseline-details summary h2 {
+  margin-bottom: 0.2rem;
+}
+
+.vibrations-baseline-details summary p {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.vibrations-baseline-details summary .button-secondary {
+  flex: 0 0 auto;
+  pointer-events: none;
+}
+
+.vibrations-baseline-details[open] summary {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .vibrations-baseline-card {
   display: grid;
   gap: 1rem;
   padding: 1rem;
-  border: 1px solid rgba(15, 23, 42, 0.1);
+  border: 1px solid rgba(31, 41, 55, 0.1);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
+  background: #ffffff;
 }
 
 .vibrations-baseline-head,
@@ -444,7 +477,7 @@
   min-width: 10rem;
   padding: 0.7rem 0.8rem;
   border-radius: 8px;
-  background: rgba(15, 23, 42, 0.045);
+  background: #f8fafc;
   color: var(--color-muted);
   font-size: 0.86rem;
 }
@@ -465,9 +498,9 @@
   gap: 0.7rem;
   min-width: 0;
   padding: 0.85rem;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(31, 41, 55, 0.1);
   border-radius: 8px;
-  background: rgba(248, 250, 252, 0.82);
+  background: #f9fafb;
 }
 
 .vibrations-trend-stats {
@@ -482,7 +515,7 @@
   min-width: 0;
   padding: 0.55rem 0.6rem;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.86);
+  background: #ffffff;
   color: var(--color-muted);
   font-size: 0.78rem;
 }
@@ -502,32 +535,32 @@
 }
 
 .vibrations-chart-axis {
-  stroke: rgba(15, 23, 42, 0.22);
+  stroke: rgba(75, 85, 99, 0.28);
   stroke-width: 1;
 }
 
 .vibrations-chart-baseline {
-  stroke: #dc2626;
+  stroke: #64748b;
   stroke-width: 1.4;
   stroke-dasharray: 5 5;
 }
 
 .vibrations-chart-line {
   fill: none;
-  stroke: var(--color-accent);
+  stroke: #2563eb;
   stroke-width: 2.4;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .vibrations-chart-dot {
-  fill: var(--color-accent);
+  fill: #2563eb;
   stroke: #fff;
   stroke-width: 1.5;
 }
 
 .vibrations-chart-dot.is-baseline {
-  fill: #dc2626;
+  fill: #475569;
 }
 
 .vibrations-chart-label {
@@ -863,5 +896,10 @@
 
   .vibrations-trend-stats {
     grid-template-columns: 1fr;
+  }
+
+  .vibrations-baseline-details summary {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

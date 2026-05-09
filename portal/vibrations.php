@@ -693,14 +693,15 @@ render_app_header('Vibrations | Análisis DATS');
     <?php endif; ?>
   </article>
 
-  <article class="card" id="baseline-dashboard">
-    <div class="section-heading">
+  <details class="card vibrations-baseline-details" id="baseline-dashboard">
+    <summary>
       <div>
         <span class="section-tag">Comparación baseline</span>
         <h2>Evolución por fenómeno</h2>
-        <p>Este cuadro resume cómo se alejan las capturas del baseline. La línea punteada marca el valor base cuando existe; los puntos muestran las capturas completadas en orden temporal.</p>
+        <p>Abre este cuadro para revisar distancia al baseline y evolución histórica de métricas clave.</p>
       </div>
-    </div>
+      <span class="button-secondary">Ver comparación</span>
+    </summary>
 
     <?php
       $trendDefinitions = [
@@ -802,7 +803,7 @@ render_app_header('Vibrations | Análisis DATS');
         <?php endforeach; ?>
       </div>
     <?php endif; ?>
-  </article>
+  </details>
 
   <section class="panel-grid">
     <article class="card">

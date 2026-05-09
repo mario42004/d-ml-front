@@ -375,7 +375,7 @@
 
 .vibrations-mini-history div {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 0.65rem;
   align-items: center;
   font-size: 0.86rem;
@@ -540,27 +540,27 @@
 }
 
 .vibrations-chart-baseline {
-  stroke: #64748b;
-  stroke-width: 1.4;
+  stroke: #f97316;
+  stroke-width: 2;
   stroke-dasharray: 5 5;
 }
 
 .vibrations-chart-line {
   fill: none;
-  stroke: #2563eb;
-  stroke-width: 2.4;
+  stroke: #0f766e;
+  stroke-width: 2.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .vibrations-chart-dot {
-  fill: #2563eb;
+  fill: #0f766e;
   stroke: #fff;
   stroke-width: 1.5;
 }
 
 .vibrations-chart-dot.is-baseline {
-  fill: #475569;
+  fill: #f97316;
 }
 
 .vibrations-chart-label {

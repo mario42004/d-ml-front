@@ -27,7 +27,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $action = (string) ($_POST['action'] ?? 'upload');
 
-        if ($action === 'set_baseline') {
+        if ($action === 'create_phenomenon') {
+            $result = create_vibration_phenomenon(
+                (int) $user['id'],
+                (string) ($_POST['phenomenon_label'] ?? ''),
+                (string) ($_POST['external_id'] ?? ''),
+                (string) ($_POST['phenomenon_description'] ?? '')
+            );
+            $message = ($result['ok'] ?? false) ? 'Fenómeno creado correctamente. Ya puedes estudiarlo.' : (string) ($result['message'] ?? 'No fue posible crear el fenómeno.');
+            $messageType = ($result['ok'] ?? false) ? 'success' : 'error';
+            if (($result['ok'] ?? false) && (int) ($result['phenomenon_id'] ?? 0) > 0) {
+                $_GET['phenomenon_id'] = (string) ((int) $result['phenomenon_id']);
+            }
+        } elseif ($action === 'set_baseline') {
             $jobId = (int) ($_POST['job_id'] ?? 0);
             $job = get_vibration_job_by_id($jobId);
 
@@ -44,6 +56,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $result = set_vibration_baseline($jobId);
                 $message = ($result['ok'] ?? false) ? 'Baseline actualizado correctamente.' : (string) ($result['message'] ?? 'No fue posible actualizar el baseline.');
                 $messageType = ($result['ok'] ?? false) ? 'success' : 'error';
+                if ((int) ($job['phenomenon_id'] ?? 0) > 0) {
+                    $_GET['phenomenon_id'] = (string) ((int) $job['phenomenon_id']);
+                }
             }
         } elseif ($action === 'delete_job') {
             $jobId = (int) ($_POST['job_id'] ?? 0);
@@ -62,6 +77,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $result = delete_vibration_job_record($jobId);
                 $message = ($result['ok'] ?? false) ? 'Registro eliminado correctamente.' : (string) ($result['message'] ?? 'No fue posible eliminar el registro.');
                 $messageType = ($result['ok'] ?? false) ? 'success' : 'error';
+                if ((int) ($job['phenomenon_id'] ?? 0) > 0) {
+                    $_GET['phenomenon_id'] = (string) ((int) $job['phenomenon_id']);
+                }
             }
         } else {
             $upload = $_FILES['dat_file'] ?? null;
@@ -72,6 +90,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $result = handle_vibrations_upload((int) $user['id'], $upload, $_POST);
                 $message = ($result['ok'] ?? false) ? 'Archivo DATS procesado correctamente. Ya puedes revisar el análisis.' : (string) ($result['message'] ?? 'No fue posible procesar el archivo.');
                 $messageType = ($result['ok'] ?? false) ? 'success' : 'error';
+                if ((int) ($_POST['phenomenon_id'] ?? 0) > 0) {
+                    $_GET['phenomenon_id'] = (string) ((int) $_POST['phenomenon_id']);
+                }
             }
         }
     }
@@ -109,6 +130,27 @@ if ($selectedJobId > 0) {
         }
     }
 }
+
+$selectedPhenomenonId = (int) ($_GET['phenomenon_id'] ?? 0);
+if ($selectedPhenomenonId <= 0 && $selectedJob !== null) {
+    $selectedPhenomenonId = (int) ($selectedJob['phenomenon_id'] ?? 0);
+}
+$selectedPhenomenon = null;
+if ($selectedPhenomenonId > 0) {
+    foreach ($phenomena as $phenomenon) {
+        if ((int) $phenomenon['id'] === $selectedPhenomenonId) {
+            $selectedPhenomenon = $phenomenon;
+            break;
+        }
+    }
+    if ($selectedPhenomenon === null) {
+        $message = 'El fenómeno seleccionado no existe o no tienes permisos para verlo.';
+        $messageType = 'error';
+        $selectedPhenomenonId = 0;
+    }
+}
+$selectedPhenomenonJobs = $selectedPhenomenonId > 0 ? ($jobsByPhenomenon[$selectedPhenomenonId] ?? []) : [];
+$selectedPhenomenonCompletedJobs = array_values(array_filter($selectedPhenomenonJobs, static fn(array $job): bool => ($job['status'] ?? '') === 'completed'));
 
 $completedJobs = count(array_filter($jobs, static fn(array $job): bool => ($job['status'] ?? '') === 'completed'));
 $failedJobs = count(array_filter($jobs, static fn(array $job): bool => ($job['status'] ?? '') === 'failed'));
@@ -445,7 +487,11 @@ render_app_header('Vibrations | Análisis DATS');
         </article>
       </div>
       <div class="table-actions">
-        <a class="button-secondary" href="#baseline-dashboard">Ver comparación baseline</a>
+        <?php if ($selectedPhenomenon !== null): ?>
+          <a class="button-secondary" href="#baseline-dashboard">Ver comparación baseline</a>
+        <?php else: ?>
+          <a class="button-secondary" href="#phenomena-list">Elegir fenómeno</a>
+        <?php endif; ?>
       </div>
     </div>
   </section>
@@ -485,15 +531,7 @@ render_app_header('Vibrations | Análisis DATS');
         <div class="table-actions">
           <a class="button-secondary" href="/portal/vibrations.php?job_id=<?= (int) $selectedJob['id'] ?>&download=metrics_csv">Descargar métricas CSV</a>
           <a class="button-secondary" href="/portal/vibrations.php?job_id=<?= (int) $selectedJob['id'] ?>&download=windows_csv">Descargar ventanas CSV</a>
-          <?php if (((int) ($selectedJob['is_baseline'] ?? 0)) !== 1): ?>
-            <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('¿Reemplazar el baseline de este fenómeno por este análisis?');">
-              <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
-              <input type="hidden" name="action" value="set_baseline">
-              <input type="hidden" name="job_id" value="<?= (int) $selectedJob['id'] ?>">
-              <button class="button" type="submit">Usar como baseline</button>
-            </form>
-          <?php endif; ?>
-          <a class="button-secondary" href="/portal/vibrations.php">Cerrar análisis</a>
+          <a class="button-secondary" href="/portal/vibrations.php?phenomenon_id=<?= (int) ($selectedJob['phenomenon_id'] ?? 0) ?>#phenomenon-workspace">Cerrar análisis</a>
         </div>
       </div>
 
@@ -618,7 +656,7 @@ render_app_header('Vibrations | Análisis DATS');
     </article>
   <?php endif; ?>
 
-  <article class="card">
+  <article class="card" id="phenomena-list">
     <div class="section-heading">
       <div>
         <span class="section-tag">Fenómenos</span>
@@ -672,25 +710,60 @@ render_app_header('Vibrations | Análisis DATS');
                     <span><?= htmlspecialchars((string) $job['status'], ENT_QUOTES, 'UTF-8') ?></span>
                     <?php if (($job['status'] ?? '') === 'completed'): ?>
                       <a href="/portal/vibrations.php?job_id=<?= (int) $job['id'] ?>#vibrations-report">Ver análisis</a>
-                      <?php if ((int) ($job['is_baseline'] ?? 0) !== 1): ?>
-                        <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('¿Reemplazar el baseline de este fenómeno por este análisis?');">
-                          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
-                          <input type="hidden" name="action" value="set_baseline">
-                          <input type="hidden" name="job_id" value="<?= (int) $job['id'] ?>">
-                          <button class="button-secondary" type="submit">Baseline</button>
-                        </form>
-                      <?php else: ?>
-                        <span>Baseline actual</span>
-                      <?php endif; ?>
                     <?php endif; ?>
                   </div>
                 <?php endforeach; ?>
               </div>
             <?php endif; ?>
+            <div class="table-actions">
+              <a class="button" href="/portal/vibrations.php?phenomenon_id=<?= (int) $phenomenon['id'] ?>#phenomenon-workspace">Estudiar fenómeno</a>
+            </div>
           </article>
         <?php endforeach; ?>
       </div>
     <?php endif; ?>
+  </article>
+
+  <article class="card">
+    <span class="section-tag">Nuevo fenómeno</span>
+    <h2>Crear fenómeno monitoreado</h2>
+    <p>Registra primero el equipo, activo o fenómeno que quieres seguir. Después entra a su espacio para cargar archivos, elegir baseline y revisar comparaciones.</p>
+    <form method="post" action="/portal/vibrations.php" class="form-block">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+      <input type="hidden" name="action" value="create_phenomenon">
+      <div class="form-grid two">
+        <div>
+          <label for="create_phenomenon_label">Fenómeno observado</label>
+          <input id="create_phenomenon_label" name="phenomenon_label" type="text" maxlength="190" placeholder="Motor, carro, bomba, estructura" required>
+        </div>
+        <div>
+          <label for="create_external_id">ID externo</label>
+          <input id="create_external_id" name="external_id" type="text" maxlength="120" placeholder="Equipo, activo o referencia">
+        </div>
+      </div>
+      <div>
+        <label for="create_phenomenon_description">Descripción</label>
+        <input id="create_phenomenon_description" name="phenomenon_description" type="text" maxlength="255" placeholder="Contexto, ubicación, montaje o condición de medición">
+      </div>
+      <button class="button" type="submit">Crear fenómeno</button>
+    </form>
+  </article>
+
+  <?php if ($selectedPhenomenon !== null): ?>
+  <article class="card" id="phenomenon-workspace">
+    <div class="section-heading">
+      <div>
+        <span class="section-tag">Fenómeno seleccionado</span>
+        <h2><?= htmlspecialchars((string) $selectedPhenomenon['name'], ENT_QUOTES, 'UTF-8') ?></h2>
+        <p><?= (string) ($selectedPhenomenon['external_id'] ?? '') !== '' ? htmlspecialchars((string) $selectedPhenomenon['external_id'], ENT_QUOTES, 'UTF-8') : 'Sin ID externo' ?></p>
+      </div>
+      <a class="button-secondary" href="/portal/vibrations.php">Cambiar fenómeno</a>
+    </div>
+    <div class="vibrations-phenomenon-metrics">
+      <span><strong><?= count($selectedPhenomenonJobs) ?></strong> capturas recientes</span>
+      <span><strong><?= count($selectedPhenomenonCompletedJobs) ?></strong> completadas</span>
+      <span><strong><?= ((int) ($selectedPhenomenon['baseline_job_id'] ?? 0)) > 0 ? '#' . (int) $selectedPhenomenon['baseline_job_id'] : 'n/d' ?></strong> baseline</span>
+    </div>
   </article>
 
   <details class="card vibrations-baseline-details" id="baseline-dashboard">
@@ -726,16 +799,11 @@ render_app_header('Vibrations | Análisis DATS');
       ];
     ?>
 
-    <?php if ($phenomena === []): ?>
-      <div class="message is-success">
-        <strong>Sin fenómenos todavía</strong>
-        <span>Cuando cargues capturas, aquí aparecerá la evolución contra baseline.</span>
-      </div>
-    <?php else: ?>
+    <?php if ($selectedPhenomenon !== null): ?>
       <div class="vibrations-baseline-grid">
-        <?php foreach ($phenomena as $phenomenon): ?>
           <?php
-            $phenomenonJobs = $jobsByPhenomenon[(int) $phenomenon['id']] ?? [];
+            $phenomenon = $selectedPhenomenon;
+            $phenomenonJobs = $selectedPhenomenonJobs;
             $completedPhenomenonJobs = array_values(array_filter($phenomenonJobs, static fn(array $job): bool => ($job['status'] ?? '') === 'completed'));
             $latestCompletedJob = $completedPhenomenonJobs[0] ?? null;
             $baselineJobId = (int) ($phenomenon['baseline_job_id'] ?? 0);
@@ -800,7 +868,6 @@ render_app_header('Vibrations | Análisis DATS');
               <?php endforeach; ?>
             </div>
           </section>
-        <?php endforeach; ?>
       </div>
     <?php endif; ?>
   </details>
@@ -809,7 +876,7 @@ render_app_header('Vibrations | Análisis DATS');
     <article class="card">
       <span class="section-tag">Nuevo análisis</span>
       <h2>Cargar archivo DATS</h2>
-      <p>Selecciona el fenómeno observado antes de cargar la captura. Usa la opción de crear solo cuando estés registrando un fenómeno diferente.</p>
+      <p>La captura se asociará a <?= htmlspecialchars((string) $selectedPhenomenon['name'], ENT_QUOTES, 'UTF-8') ?> y se comparará contra el baseline de este fenómeno cuando exista.</p>
       <div class="coin-balance-strip">
         <strong><?= (int) $vibrationsCoins ?></strong>
         <span>coins disponibles para Vibrations</span>
@@ -818,39 +885,7 @@ render_app_header('Vibrations | Análisis DATS');
       <form method="post" action="/portal/vibrations.php" enctype="multipart/form-data" class="form-block">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
         <input type="hidden" name="action" value="upload">
-
-        <?php if ($phenomena !== []): ?>
-          <div>
-            <label for="phenomenon_id">Fenómeno observado existente</label>
-            <select id="phenomenon_id" name="phenomenon_id" <?= $vibrationsCoins > 0 ? '' : 'disabled' ?>>
-              <?php foreach ($phenomena as $phenomenon): ?>
-                <option value="<?= (int) $phenomenon['id'] ?>">
-                  <?= htmlspecialchars((string) $phenomenon['name'] . ((string) ($phenomenon['external_id'] ?? '') !== '' ? ' · ' . (string) $phenomenon['external_id'] : ''), ENT_QUOTES, 'UTF-8') ?>
-                </option>
-              <?php endforeach; ?>
-              <option value="0">Crear nuevo fenómeno</option>
-            </select>
-            <small class="field-help">Al seleccionar uno existente, la captura se suma a su historial y se compara con su baseline.</small>
-          </div>
-        <?php endif; ?>
-
-        <div id="new-phenomenon-fields" class="vibrations-new-phenomenon <?= $phenomena !== [] ? 'is-hidden' : '' ?>">
-        <div class="form-grid two">
-          <div>
-            <label for="phenomenon_label">Nuevo fenómeno observado</label>
-            <input id="phenomenon_label" name="phenomenon_label" type="text" maxlength="190" placeholder="Motor, carro, bomba, estructura" <?= $phenomena !== [] || $vibrationsCoins <= 0 ? 'disabled' : '' ?>>
-          </div>
-          <div>
-            <label for="external_id">ID externo</label>
-            <input id="external_id" name="external_id" type="text" maxlength="120" placeholder="Equipo, activo o referencia" <?= $phenomena !== [] || $vibrationsCoins <= 0 ? 'disabled' : '' ?>>
-          </div>
-        </div>
-
-        <div>
-          <label for="phenomenon_description">Descripción del fenómeno</label>
-          <input id="phenomenon_description" name="phenomenon_description" type="text" maxlength="255" placeholder="Contexto, ubicación, montaje o condición de medición" <?= $phenomena !== [] || $vibrationsCoins <= 0 ? 'disabled' : '' ?>>
-        </div>
-        </div>
+        <input type="hidden" name="phenomenon_id" value="<?= (int) $selectedPhenomenon['id'] ?>">
 
         <div class="form-grid two">
           <div>
@@ -890,7 +925,7 @@ render_app_header('Vibrations | Análisis DATS');
 
   <article class="card">
     <span class="section-tag">Historial</span>
-    <h2>Tus archivos procesados</h2>
+    <h2>Capturas de <?= htmlspecialchars((string) $selectedPhenomenon['name'], ENT_QUOTES, 'UTF-8') ?></h2>
     <div class="table-wrap">
       <table>
         <thead>
@@ -905,10 +940,10 @@ render_app_header('Vibrations | Análisis DATS');
           </tr>
         </thead>
         <tbody>
-          <?php if ($jobs === []): ?>
+          <?php if ($selectedPhenomenonJobs === []): ?>
             <tr><td colspan="7">Todavía no hay archivos DATS procesados.</td></tr>
           <?php endif; ?>
-          <?php foreach ($jobs as $job): ?>
+          <?php foreach ($selectedPhenomenonJobs as $job): ?>
             <tr>
               <td><?= htmlspecialchars((string) $job['created_at'], ENT_QUOTES, 'UTF-8') ?></td>
               <td><?= htmlspecialchars((string) ($job['phenomenon_label'] ?: 'Sin etiqueta'), ENT_QUOTES, 'UTF-8') ?></td>
@@ -946,10 +981,12 @@ render_app_header('Vibrations | Análisis DATS');
     </div>
   </article>
 
-  <?php if ($canAdministerVibrations): ?>
+  <?php endif; ?>
+
+  <?php if ($selectedPhenomenon !== null && $canAdministerVibrations): ?>
     <article class="card">
       <span class="section-tag">Admin</span>
-      <h2>Últimos análisis del producto</h2>
+      <h2>Últimos análisis de este fenómeno</h2>
       <div class="table-wrap">
         <table>
           <thead>
@@ -964,7 +1001,7 @@ render_app_header('Vibrations | Análisis DATS');
             </tr>
           </thead>
           <tbody>
-            <?php foreach ($adminJobs as $job): ?>
+            <?php foreach (array_filter($adminJobs, static fn(array $job): bool => (int) ($job['phenomenon_id'] ?? 0) === $selectedPhenomenonId) as $job): ?>
               <tr>
                 <td><?= htmlspecialchars((string) $job['created_at'], ENT_QUOTES, 'UTF-8') ?></td>
                 <td><?= htmlspecialchars((string) ($job['user_name'] ?? $job['email'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
@@ -983,16 +1020,6 @@ render_app_header('Vibrations | Análisis DATS');
                 <td class="table-actions">
                   <?php if (($job['status'] ?? '') === 'completed'): ?>
                     <a class="button-secondary" href="/portal/vibrations.php?job_id=<?= (int) $job['id'] ?>#vibrations-report">Ver análisis</a>
-                    <?php if ((int) ($job['is_baseline'] ?? 0) !== 1): ?>
-                      <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('¿Reemplazar el baseline de este fenómeno por este análisis?');">
-                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
-                        <input type="hidden" name="action" value="set_baseline">
-                        <input type="hidden" name="job_id" value="<?= (int) $job['id'] ?>">
-                        <button class="button-secondary" type="submit">Usar como baseline</button>
-                      </form>
-                    <?php else: ?>
-                      <span class="status-pill is-active">Baseline actual</span>
-                    <?php endif; ?>
                   <?php endif; ?>
                   <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('¿Eliminar este análisis?');">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
@@ -1009,28 +1036,4 @@ render_app_header('Vibrations | Análisis DATS');
     </article>
   <?php endif; ?>
 </section>
-<script>
-(() => {
-  const select = document.getElementById('phenomenon_id');
-  const fields = document.getElementById('new-phenomenon-fields');
-  if (!select || !fields) {
-    return;
-  }
-
-  const inputs = fields.querySelectorAll('input, select, textarea');
-  const syncNewPhenomenonFields = () => {
-    const creating = select.value === '0';
-    fields.classList.toggle('is-hidden', !creating);
-    inputs.forEach((input) => {
-      input.disabled = !creating || select.disabled;
-      if (!creating && input instanceof HTMLInputElement) {
-        input.value = '';
-      }
-    });
-  };
-
-  select.addEventListener('change', syncNewPhenomenonFields);
-  syncNewPhenomenonFields();
-})();
-</script>
 <?php render_app_footer(); ?>

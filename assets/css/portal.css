@@ -568,6 +568,35 @@
   font-size: 0.7rem;
 }
 
+.vibrations-reference-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin: 1rem 0;
+}
+
+.vibrations-reference-summary > span {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 4.25rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.vibrations-reference-summary strong {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 0.18rem;
+  color: var(--color-text);
+  font-size: 1rem;
+}
+
 .vibrations-comparison-table td:first-child {
   min-width: 13rem;
 }
@@ -910,6 +939,7 @@
   .audioprint-summary-grid,
   .audioprint-plot-grid,
   .audioprint-peak-grid,
+  .vibrations-reference-summary,
   .vibrations-trend-grid,
   .audiometer-stage,
   .audiometer-report-grid,

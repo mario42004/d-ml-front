@@ -47,14 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = 'El registro seleccionado no existe.';
                 $messageType = 'error';
             } elseif (!is_system_admin() && (int) ($job['organization_id'] ?? 0) !== $currentOrganizationId) {
-                $message = 'No tienes permisos para marcar este baseline.';
+                $message = 'No tienes permisos para marcar esta referencia.';
                 $messageType = 'error';
             } elseif (!$canAdministerVibrations && (int) $job['user_id'] !== (int) $user['id']) {
-                $message = 'No tienes permisos para marcar este baseline.';
+                $message = 'No tienes permisos para marcar esta referencia.';
                 $messageType = 'error';
             } else {
                 $result = set_vibration_baseline($jobId);
-                $message = ($result['ok'] ?? false) ? 'Baseline actualizado correctamente.' : (string) ($result['message'] ?? 'No fue posible actualizar el baseline.');
+                $message = ($result['ok'] ?? false) ? 'Referencia actualizada correctamente.' : (string) ($result['message'] ?? 'No fue posible actualizar la referencia.');
                 $messageType = ($result['ok'] ?? false) ? 'success' : 'error';
                 if ((int) ($job['phenomenon_id'] ?? 0) > 0) {
                     $_GET['phenomenon_id'] = (string) ((int) $job['phenomenon_id']);
@@ -253,12 +253,12 @@ function vibrations_trend_summary_html(array $points, ?float $baselineValue, str
     }
 
     $deltaText = $delta === null
-        ? 'sin baseline'
+        ? 'sin referencia'
         : (($delta >= 0 ? '+' : '') . vibrations_format_value($delta, $unit) . ($deltaPercent === null ? '' : ' / ' . ($deltaPercent >= 0 ? '+' : '') . vibrations_format_value($deltaPercent, '%')));
 
     return '<div class="vibrations-trend-stats">'
         . '<span><strong>' . htmlspecialchars(vibrations_format_value($latestValue, $unit), ENT_QUOTES, 'UTF-8') . '</strong> último</span>'
-        . '<span><strong>' . htmlspecialchars($baselineValue === null ? 'n/d' : vibrations_format_value($baselineValue, $unit), ENT_QUOTES, 'UTF-8') . '</strong> baseline</span>'
+        . '<span><strong>' . htmlspecialchars($baselineValue === null ? 'n/d' : vibrations_format_value($baselineValue, $unit), ENT_QUOTES, 'UTF-8') . '</strong> referencia</span>'
         . '<span><strong>' . htmlspecialchars($deltaText, ENT_QUOTES, 'UTF-8') . '</strong> desviación</span>'
         . '</div>';
 }
@@ -306,6 +306,37 @@ function vibrations_control_status(?float $distanceOrDeltaPercent): array
     }
 
     return ['label' => 'Cerca de referencia', 'class' => 'is-stable'];
+}
+
+function vibrations_metric_display_label(string $metricKey): string
+{
+    $sensorLabels = [
+        'accelerometer' => 'Acelerómetro',
+        'gyroscope' => 'Giroscopio',
+    ];
+    $metricLabels = [
+        'jerk_max_abs' => 'Jerk máximo absoluto',
+        'jerk_rms' => 'Jerk RMS',
+        'magnitude_peak_to_peak' => 'Magnitud pico a pico',
+        'spectral_bandwidth_hz' => 'Ancho de banda espectral',
+        'estimated_sample_rate_hz' => 'Frecuencia de muestreo estimada',
+        'band_power_low' => 'Potencia en banda baja',
+        'dynamic_peak_to_peak' => 'Dinámica pico a pico',
+        'dynamic_peak_abs' => 'Pico dinámico absoluto',
+        'dynamic_rms' => 'RMS dinámico',
+        'spectral_centroid_hz' => 'Centroide espectral',
+        'dominant_frequency_hz' => 'Frecuencia dominante',
+    ];
+
+    foreach ($sensorLabels as $prefix => $sensorLabel) {
+        $prefixText = $prefix . '_';
+        if (str_starts_with($metricKey, $prefixText)) {
+            $metricName = substr($metricKey, strlen($prefixText));
+            return $sensorLabel . ' - ' . ($metricLabels[$metricName] ?? ucfirst(str_replace('_', ' ', $metricName)));
+        }
+    }
+
+    return ucfirst(str_replace('_', ' ', $metricKey));
 }
 
 function vibrations_svg_polyline(array $points, ?float $baselineValue = null, string $scale = 'linear'): string
@@ -384,7 +415,7 @@ function vibrations_svg_polyline(array $points, ?float $baselineValue = null, st
         $dots .= '<circle class="' . $class . '" cx="' . htmlspecialchars($x, ENT_QUOTES, 'UTF-8') . '" cy="' . htmlspecialchars($y, ENT_QUOTES, 'UTF-8') . '" r="4"></circle>';
     }
 
-    return '<svg class="vibrations-trend-chart" viewBox="0 0 ' . $width . ' ' . $height . '" role="img" aria-label="Evolución de métrica frente al baseline">'
+    return '<svg class="vibrations-trend-chart" viewBox="0 0 ' . $width . ' ' . $height . '" role="img" aria-label="Evolución de métrica frente a la referencia">'
         . '<line class="vibrations-chart-axis" x1="' . $left . '" y1="' . ($height - $bottom) . '" x2="' . ($width - $right) . '" y2="' . ($height - $bottom) . '"></line>'
         . '<line class="vibrations-chart-axis" x1="' . $left . '" y1="' . $top . '" x2="' . $left . '" y2="' . ($height - $bottom) . '"></line>'
         . $baselineLine
@@ -511,7 +542,7 @@ render_app_header('Vibrations | Análisis DATS');
       <div>
         <span class="role-badge">Vibrations</span>
         <h1>Análisis de acelerómetro y giroscopio por ventanas de observación.</h1>
-        <p class="lead">Carga archivos <code>.dat</code> capturados por sensores inerciales. La API calcula métricas globales y ventanas de 500 ms para detectar vibraciones fuertes, cambios bruscos y señales que puedan alimentar un baseline histórico.</p>
+        <p class="lead">Carga archivos <code>.dat</code> capturados por sensores inerciales. La API calcula métricas globales y ventanas de 500 ms para detectar vibraciones fuertes, cambios bruscos y señales que puedan alimentar una referencia histórica.</p>
       </div>
       <div class="stats-grid">
         <article class="stat-card">
@@ -528,12 +559,12 @@ render_app_header('Vibrations | Análisis DATS');
         </article>
         <article class="stat-card">
           <strong><?= $baselineJobs ?></strong>
-          <span>baselines activos</span>
+          <span>referencias activas</span>
         </article>
       </div>
       <div class="table-actions">
         <?php if ($selectedPhenomenon !== null): ?>
-          <a class="button-secondary" href="#baseline-dashboard">Ver comparación baseline</a>
+          <a class="button-secondary" href="#baseline-dashboard">Ver comparación con referencia</a>
         <?php else: ?>
           <a class="button-secondary" href="#phenomena-list">Elegir fenómeno</a>
         <?php endif; ?>
@@ -599,52 +630,51 @@ render_app_header('Vibrations | Análisis DATS');
         </article>
         <article class="stat-card">
           <strong><?= ((int) ($selectedJob['is_baseline'] ?? 0)) === 1 ? 'Sí' : vibrations_format_value($selectedJob['baseline_distance_score'] ?? null, '%') ?></strong>
-          <span><?= ((int) ($selectedJob['is_baseline'] ?? 0)) === 1 ? 'baseline activo' : 'distancia al baseline' ?></span>
+          <span><?= ((int) ($selectedJob['is_baseline'] ?? 0)) === 1 ? 'referencia activa' : 'distancia a referencia' ?></span>
         </article>
       </div>
 
       <?php if ($baselineSummary !== null): ?>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Baseline</th>
-                <th>Métricas comparadas</th>
-                <th>Distancia</th>
-                <th>Severidad</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>#<?= (int) ($baselineSummary['baseline_job_id'] ?? 0) ?></td>
-                <td><?= (int) ($baselineSummary['compared_metric_count'] ?? 0) ?></td>
-                <td><?= htmlspecialchars(vibrations_format_value($baselineSummary['distance_score'] ?? null, '%'), ENT_QUOTES, 'UTF-8') ?></td>
-                <td><?= htmlspecialchars((string) ($baselineSummary['severity'] ?? 'normal'), ENT_QUOTES, 'UTF-8') ?></td>
-              </tr>
-            </tbody>
-          </table>
+        <?php
+          $distanceStatus = vibrations_control_status(is_numeric($baselineSummary['distance_score'] ?? null) ? (float) $baselineSummary['distance_score'] : null);
+          $topDifferences = is_array($baselineSummary['top_differences'] ?? null) ? $baselineSummary['top_differences'] : [];
+        ?>
+        <div class="vibrations-reference-summary">
+          <span><strong>#<?= (int) ($baselineSummary['baseline_job_id'] ?? 0) ?></strong> captura de referencia</span>
+          <span><strong><?= (int) ($baselineSummary['compared_metric_count'] ?? 0) ?></strong> métricas comparadas</span>
+          <span><strong><?= htmlspecialchars(vibrations_format_value($baselineSummary['distance_score'] ?? null, '%'), ENT_QUOTES, 'UTF-8') ?></strong> distancia global</span>
+          <span><strong class="vibrations-control-status <?= htmlspecialchars($distanceStatus['class'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($distanceStatus['label'], ENT_QUOTES, 'UTF-8') ?></strong> estado</span>
         </div>
 
-        <?php $topDifferences = is_array($baselineSummary['top_differences'] ?? null) ? $baselineSummary['top_differences'] : []; ?>
         <?php if ($topDifferences !== []): ?>
           <div class="table-wrap">
-            <table>
+            <table class="vibrations-comparison-table">
               <thead>
                 <tr>
-                  <th>Métrica</th>
-                  <th>Baseline</th>
+                  <th>Métrica con mayor cambio</th>
+                  <th>Referencia</th>
                   <th>Actual</th>
-                  <th>Diferencia</th>
+                  <th>Cambio</th>
+                  <th>Estado</th>
                 </tr>
               </thead>
               <tbody>
                 <?php foreach ($topDifferences as $difference): ?>
                   <?php if (!is_array($difference)) { continue; } ?>
+                  <?php
+                    $metricKey = (string) ($difference['metric_key'] ?? '');
+                    $deltaPercent = is_numeric($difference['relative_delta_percent'] ?? null) ? (float) $difference['relative_delta_percent'] : null;
+                    $status = vibrations_control_status($deltaPercent);
+                  ?>
                   <tr>
-                    <td><?= htmlspecialchars((string) ($difference['metric_key'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                    <td>
+                      <strong><?= htmlspecialchars(vibrations_metric_display_label($metricKey), ENT_QUOTES, 'UTF-8') ?></strong>
+                      <span><?= htmlspecialchars($metricKey, ENT_QUOTES, 'UTF-8') ?></span>
+                    </td>
                     <td><?= htmlspecialchars(vibrations_format_value($difference['baseline'] ?? null), ENT_QUOTES, 'UTF-8') ?></td>
                     <td><?= htmlspecialchars(vibrations_format_value($difference['current'] ?? null), ENT_QUOTES, 'UTF-8') ?></td>
-                    <td><?= htmlspecialchars(vibrations_format_value($difference['relative_delta_percent'] ?? null, '%'), ENT_QUOTES, 'UTF-8') ?></td>
+                    <td><?= htmlspecialchars($deltaPercent === null ? 'n/d' : (($deltaPercent >= 0 ? '+' : '') . vibrations_format_value($deltaPercent, '%')), ENT_QUOTES, 'UTF-8') ?></td>
+                    <td><span class="vibrations-control-status <?= htmlspecialchars($status['class'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($status['label'], ENT_QUOTES, 'UTF-8') ?></span></td>
                   </tr>
                 <?php endforeach; ?>
               </tbody>
@@ -653,8 +683,8 @@ render_app_header('Vibrations | Análisis DATS');
         <?php endif; ?>
       <?php elseif (((int) ($selectedJob['is_baseline'] ?? 0)) !== 1): ?>
         <div class="message is-success">
-          <strong>Sin baseline comparable</strong>
-          <span>Marca una captura completada del mismo fenómeno o ID externo como baseline para comparar nuevos archivos.</span>
+          <strong>Sin referencia comparable</strong>
+          <span>Marca una captura completada del mismo fenómeno o ID externo como referencia para comparar nuevos archivos.</span>
         </div>
       <?php endif; ?>
 
@@ -766,7 +796,7 @@ render_app_header('Vibrations | Análisis DATS');
   <article class="card">
     <span class="section-tag">Nuevo fenómeno</span>
     <h2>Crear fenómeno monitoreado</h2>
-    <p>Registra primero el equipo, activo o fenómeno que quieres seguir. Después entra a su espacio para cargar archivos, elegir baseline y revisar comparaciones.</p>
+    <p>Registra primero el equipo, activo o fenómeno que quieres seguir. Después entra a su espacio para cargar archivos, elegir una referencia y revisar comparaciones.</p>
     <form method="post" action="/portal/vibrations.php" class="form-block">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
       <input type="hidden" name="action" value="create_phenomenon">
@@ -801,16 +831,16 @@ render_app_header('Vibrations | Análisis DATS');
     <div class="vibrations-phenomenon-metrics">
       <span><strong><?= count($selectedPhenomenonJobs) ?></strong> capturas recientes</span>
       <span><strong><?= count($selectedPhenomenonCompletedJobs) ?></strong> completadas</span>
-      <span><strong><?= ((int) ($selectedPhenomenon['baseline_job_id'] ?? 0)) > 0 ? '#' . (int) $selectedPhenomenon['baseline_job_id'] : 'n/d' ?></strong> baseline</span>
+      <span><strong><?= ((int) ($selectedPhenomenon['baseline_job_id'] ?? 0)) > 0 ? '#' . (int) $selectedPhenomenon['baseline_job_id'] : 'n/d' ?></strong> referencia</span>
     </div>
   </article>
 
   <details class="card vibrations-baseline-details" id="baseline-dashboard">
     <summary>
       <div>
-        <span class="section-tag">Comparación baseline</span>
+        <span class="section-tag">Comparación con referencia</span>
         <h2>Evolución por fenómeno</h2>
-        <p>Abre este cuadro para revisar distancia al baseline y evolución histórica de métricas clave.</p>
+        <p>Abre este cuadro para revisar distancia a la referencia y evolución histórica de métricas clave.</p>
       </div>
       <span class="button-secondary">Ver comparación</span>
     </summary>
@@ -858,7 +888,7 @@ render_app_header('Vibrations | Análisis DATS');
                   <span><?= htmlspecialchars((string) $phenomenon['external_id'], ENT_QUOTES, 'UTF-8') ?></span>
                 <?php endif; ?>
               </div>
-              <span class="status-pill <?= $baselineJobId > 0 ? 'is-active' : 'is-inactive' ?>"><?= $baselineJobId > 0 ? 'Baseline #' . $baselineJobId : 'Sin baseline' ?></span>
+              <span class="status-pill <?= $baselineJobId > 0 ? 'is-active' : 'is-inactive' ?>"><?= $baselineJobId > 0 ? 'Referencia #' . $baselineJobId : 'Sin referencia' ?></span>
             </div>
 
             <div class="vibrations-baseline-summary">
@@ -935,7 +965,7 @@ render_app_header('Vibrations | Análisis DATS');
     <article class="card">
       <span class="section-tag">Nuevo análisis</span>
       <h2>Cargar archivo DATS</h2>
-      <p>La captura se asociará a <?= htmlspecialchars((string) $selectedPhenomenon['name'], ENT_QUOTES, 'UTF-8') ?> y se comparará contra el baseline de este fenómeno cuando exista.</p>
+      <p>La captura se asociará a <?= htmlspecialchars((string) $selectedPhenomenon['name'], ENT_QUOTES, 'UTF-8') ?> y se comparará contra la referencia de este fenómeno cuando exista.</p>
       <div class="coin-balance-strip">
         <strong><?= (int) $vibrationsCoins ?></strong>
         <span>coins disponibles para Vibrations</span>
@@ -971,11 +1001,11 @@ render_app_header('Vibrations | Análisis DATS');
     </article>
 
     <article class="card">
-      <span class="section-tag">Baseline</span>
+      <span class="section-tag">Referencia</span>
       <h2>Comparación por fenómeno</h2>
       <p>El primer objetivo es fijar una captura representativa para cada fenómeno. A partir de ahí, cada nuevo archivo se compara contra ese punto de referencia.</p>
       <ul class="service-list">
-        <li>Marca un análisis completado como baseline desde su historial.</li>
+        <li>Marca un análisis completado como referencia desde su historial.</li>
         <li>Las distancias se calculan solo dentro del mismo fenómeno.</li>
         <li>Los cambios fuertes quedan visibles en ventanas de observación.</li>
       </ul>
@@ -993,7 +1023,7 @@ render_app_header('Vibrations | Análisis DATS');
             <th>Fenómeno</th>
             <th>Archivo</th>
             <th>Ventana</th>
-            <th>Baseline</th>
+            <th>Referencia</th>
             <th>Estado</th>
             <th></th>
           </tr>
@@ -1010,7 +1040,7 @@ render_app_header('Vibrations | Análisis DATS');
               <td><?= (int) $job['window_ms'] ?> ms</td>
               <td>
                 <?php if ((int) ($job['is_baseline'] ?? 0) === 1): ?>
-                  Baseline
+                  Referencia
                 <?php elseif (is_numeric($job['baseline_distance_score'] ?? null)): ?>
                   <?= htmlspecialchars(vibrations_format_value($job['baseline_distance_score'], '%'), ENT_QUOTES, 'UTF-8') ?>
                 <?php else: ?>
@@ -1022,14 +1052,14 @@ render_app_header('Vibrations | Análisis DATS');
                 <?php if (($job['status'] ?? '') === 'completed'): ?>
                   <a class="button-secondary" href="/portal/vibrations.php?job_id=<?= (int) $job['id'] ?>#vibrations-report">Ver análisis</a>
                   <?php if ((int) ($job['is_baseline'] ?? 0) !== 1): ?>
-                    <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('¿Reemplazar el baseline de este fenómeno por este análisis?');">
+                    <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('¿Reemplazar la referencia de este fenómeno por este análisis?');">
                       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                       <input type="hidden" name="action" value="set_baseline">
                       <input type="hidden" name="job_id" value="<?= (int) $job['id'] ?>">
-                      <button class="button-secondary" type="submit">Usar como baseline</button>
+                      <button class="button-secondary" type="submit">Usar como referencia</button>
                     </form>
                   <?php else: ?>
-                    <span class="status-pill is-active">Baseline actual</span>
+                    <span class="status-pill is-active">Referencia actual</span>
                   <?php endif; ?>
                 <?php endif; ?>
               </td>
@@ -1054,7 +1084,7 @@ render_app_header('Vibrations | Análisis DATS');
               <th>Usuario</th>
               <th>Fenómeno</th>
               <th>Archivo</th>
-              <th>Baseline</th>
+              <th>Referencia</th>
               <th>Estado</th>
               <th></th>
             </tr>
@@ -1068,7 +1098,7 @@ render_app_header('Vibrations | Análisis DATS');
                 <td><?= htmlspecialchars((string) $job['original_filename'], ENT_QUOTES, 'UTF-8') ?></td>
                 <td>
                   <?php if ((int) ($job['is_baseline'] ?? 0) === 1): ?>
-                    Baseline
+                    Referencia
                   <?php elseif (is_numeric($job['baseline_distance_score'] ?? null)): ?>
                     <?= htmlspecialchars(vibrations_format_value($job['baseline_distance_score'], '%'), ENT_QUOTES, 'UTF-8') ?>
                   <?php else: ?>

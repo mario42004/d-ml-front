@@ -403,9 +403,70 @@ CREATE TABLE audiometer_tests (
   CONSTRAINT fk_audiometer_tests_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE vibration_phenomena (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NOT NULL,
+  organization_id BIGINT UNSIGNED NOT NULL,
+  product_id BIGINT UNSIGNED NOT NULL,
+  name VARCHAR(190) NOT NULL,
+  external_id VARCHAR(120) NOT NULL DEFAULT '',
+  description VARCHAR(255) NOT NULL DEFAULT '',
+  baseline_job_id BIGINT UNSIGNED NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_vibration_phenomena_org_user_external (organization_id, user_id, external_id),
+  KEY idx_vibration_phenomena_user_time (user_id, created_at),
+  KEY idx_vibration_phenomena_org_product (organization_id, product_id),
+  CONSTRAINT fk_vibration_phenomena_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_vibration_phenomena_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  CONSTRAINT fk_vibration_phenomena_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE vibration_jobs (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NOT NULL,
+  organization_id BIGINT UNSIGNED NOT NULL,
+  product_id BIGINT UNSIGNED NOT NULL,
+  phenomenon_id BIGINT UNSIGNED NULL,
+  original_filename VARCHAR(255) NOT NULL,
+  phenomenon_label VARCHAR(190) NOT NULL DEFAULT '',
+  external_id VARCHAR(120) NOT NULL DEFAULT '',
+  baseline_scope VARCHAR(240) NOT NULL DEFAULT '',
+  is_baseline TINYINT(1) NOT NULL DEFAULT 0,
+  baseline_job_id BIGINT UNSIGNED NULL,
+  baseline_distance_score DOUBLE NULL,
+  baseline_summary_json JSON NULL,
+  mime_type VARCHAR(120) NULL,
+  dat_size_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  dat_path VARCHAR(255) NOT NULL,
+  dat_url VARCHAR(255) NOT NULL,
+  analysis_path VARCHAR(255) NULL,
+  analysis_url VARCHAR(255) NULL,
+  window_ms INT NOT NULL DEFAULT 500,
+  status VARCHAR(40) NOT NULL DEFAULT 'pending',
+  error_message TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  processed_at TIMESTAMP NULL DEFAULT NULL,
+  PRIMARY KEY (id),
+  KEY idx_vibration_jobs_user_time (user_id, created_at),
+  KEY idx_vibration_jobs_phenomenon_time (phenomenon_id, created_at),
+  KEY idx_vibration_jobs_org_time (organization_id, created_at),
+  KEY idx_vibration_jobs_baseline_scope (organization_id, baseline_scope, is_baseline),
+  KEY idx_vibration_jobs_product_time (product_id, created_at),
+  KEY idx_vibration_jobs_status (status),
+  CONSTRAINT fk_vibration_jobs_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_vibration_jobs_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  CONSTRAINT fk_vibration_jobs_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+  CONSTRAINT fk_vibration_jobs_phenomenon FOREIGN KEY (phenomenon_id) REFERENCES vibration_phenomena(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT INTO products (code, name, description, is_public, is_active, sort_order)
 VALUES
   ('audioprint', 'Audioprint', 'Solucion para subir audios y generar su analisis.', 1, 1, 10),
+  ('vibrations', 'Vibrations', 'Analisis de acelerometro y giroscopio para seguimiento de vibraciones y cambios anomalos.', 1, 1, 12),
   ('audiometer', 'Audiometer', 'Screening auditivo orientativo con tonos puros, audiograma relativo e historial de pruebas.', 1, 1, 15),
   ('qvoice', 'Qvoice', 'Solucion orientada al seguimiento de la voz humana en entornos laborales.', 1, 1, 20),
   ('smart_tales', 'Smart Tales', 'Cuentos personalizados con voces familiares, perfiles infantiles e historial narrativo.', 1, 1, 30)
@@ -423,6 +484,10 @@ JOIN (
   SELECT 'audioprint' AS product_code, 'admin' AS code, 'Admin' AS name, 'Gestion del producto, usuarios e historial.' AS description
   UNION ALL
   SELECT 'audioprint', 'user', 'User', 'Uso normal del producto y gestión de sus propios audios.'
+  UNION ALL
+  SELECT 'vibrations', 'admin', 'Admin', 'Gestion del producto, usuarios e historial.'
+  UNION ALL
+  SELECT 'vibrations', 'user', 'User', 'Carga de archivos DATS y revision de sus propios analisis.'
   UNION ALL
   SELECT 'audiometer', 'admin', 'Admin', 'Gestion del producto, usuarios e historial.'
   UNION ALL

@@ -25,6 +25,10 @@ function normalize_email(string $email): string
 
 function present_product_name(string $productCode, string $fallbackName): string
 {
+    if ($productCode === 'vibrations') {
+        return 'Vibrations';
+    }
+
     if ($productCode === 'audiometer') {
         return 'Audiometer';
     }
@@ -38,6 +42,10 @@ function present_product_name(string $productCode, string $fallbackName): string
 
 function present_product_description(string $productCode, ?string $fallbackDescription): ?string
 {
+    if ($productCode === 'vibrations') {
+        return 'Analisis de acelerometro y giroscopio para seguimiento de vibraciones y cambios anomalos.';
+    }
+
     if ($productCode === 'audiometer') {
         return 'Screening auditivo orientativo con tonos puros, audiograma relativo e historial de pruebas.';
     }
@@ -57,6 +65,10 @@ function product_dashboard_path(string $productCode): ?string
 
     if ($productCode === 'audiometer') {
         return '/portal/audiometer.php';
+    }
+
+    if ($productCode === 'vibrations') {
+        return '/portal/vibrations.php';
     }
 
     if ($productCode === 'qvoice') {
@@ -103,7 +115,7 @@ function ensure_organization_schema(): void
     $genericId = (int) $pdo->query("SELECT id FROM organizations WHERE slug = 'generica' LIMIT 1")->fetchColumn();
     $legacyId = (int) ($pdo->query("SELECT id FROM organizations WHERE slug = 'default' LIMIT 1")->fetchColumn() ?: 0);
     if ($legacyId > 0 && $legacyId !== $genericId) {
-        foreach (['users', 'user_product_roles', 'audio_jobs', 'audiometer_tests'] as $table) {
+        foreach (['users', 'user_product_roles', 'audio_jobs', 'audiometer_tests', 'vibration_phenomena', 'vibration_jobs'] as $table) {
             try {
                 $pdo->exec("UPDATE {$table} SET organization_id = {$genericId} WHERE organization_id = {$legacyId}");
             } catch (Throwable) {
@@ -318,7 +330,7 @@ function delete_organization_record(int $organizationId): array
             $userUpdate = $pdo->prepare("UPDATE users SET organization_id = ? WHERE id IN ($placeholders)");
             $userUpdate->execute(array_merge([$defaultOrganizationId], $userIds));
 
-            foreach (['audio_jobs', 'audiometer_tests'] as $table) {
+            foreach (['audio_jobs', 'audiometer_tests', 'vibration_phenomena', 'vibration_jobs'] as $table) {
                 try {
                     $dataUpdate = $pdo->prepare("UPDATE {$table} SET organization_id = ? WHERE user_id IN ($placeholders)");
                     $dataUpdate->execute(array_merge([$defaultOrganizationId], $userIds));
@@ -336,7 +348,7 @@ function delete_organization_record(int $organizationId): array
               AND kept_role.id < duplicate_role.id'
         );
 
-        foreach (['user_product_roles', 'audio_jobs', 'audiometer_tests'] as $table) {
+        foreach (['user_product_roles', 'audio_jobs', 'audiometer_tests', 'vibration_phenomena', 'vibration_jobs'] as $table) {
             try {
                 $stmt = $pdo->prepare("UPDATE {$table} SET organization_id = :default_organization_id WHERE organization_id = :organization_id");
                 $stmt->execute([

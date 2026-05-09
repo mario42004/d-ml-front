@@ -60,7 +60,7 @@ function ensure_vibrations_schema(): void
     db()->exec(
         <<<'SQL'
         INSERT INTO products (code, name, description, is_public, is_active, sort_order)
-        VALUES ('vibrations', 'Vibrations', 'Analisis de acelerometro y giroscopio para seguimiento de vibraciones y cambios anomalos.', 1, 1, 12)
+        VALUES ('vibrations', 'Vibrations', 'Análisis de acelerómetro y giroscopio para seguimiento de vibraciones y cambios anómalos.', 1, 1, 12)
         ON DUPLICATE KEY UPDATE
           name = VALUES(name),
           description = VALUES(description),
@@ -76,9 +76,9 @@ function ensure_vibrations_schema(): void
         SELECT p.id, role_seed.code, role_seed.name, role_seed.description
         FROM products p
         INNER JOIN (
-          SELECT 'admin' AS code, 'Admin' AS name, 'Gestion del producto, usuarios e historial.' AS description
+          SELECT 'admin' AS code, 'Admin' AS name, 'Gestión del producto, usuarios e historial.' AS description
           UNION ALL
-          SELECT 'user', 'User', 'Carga de archivos DATS y revision de sus propios analisis.'
+          SELECT 'user', 'User', 'Carga de archivos DATS y revisión de sus propios análisis.'
         ) role_seed
         WHERE p.code = 'vibrations'
         ON DUPLICATE KEY UPDATE
@@ -199,17 +199,17 @@ function create_vibration_phenomenon(int $userId, string $name, string $external
 {
     $product = vibrations_product();
     if ($product === null) {
-        return ['ok' => false, 'message' => 'Vibrations no esta configurado en la base de datos.'];
+        return ['ok' => false, 'message' => 'Vibrations no está configurado en la base de datos.'];
     }
 
     $organizationId = current_organization_id();
     if ($organizationId <= 0) {
-        return ['ok' => false, 'message' => 'No hay una organizacion activa para crear el fenomeno.'];
+        return ['ok' => false, 'message' => 'No hay una organización activa para crear el fenómeno.'];
     }
 
     $name = vibrations_trim($name, 190);
     if ($name === '') {
-        return ['ok' => false, 'message' => 'Debes indicar el nombre del fenomeno observado.'];
+        return ['ok' => false, 'message' => 'Debes indicar el nombre del fenómeno observado.'];
     }
 
     $externalKey = vibrations_external_key(vibrations_trim($externalId, 120), $name);
@@ -279,7 +279,7 @@ function create_vibration_job_record(int $userId, int $productId, ?int $phenomen
     ensure_vibrations_schema();
     $organizationId = current_organization_id();
     if ($organizationId <= 0) {
-        throw new RuntimeException('No hay una organizacion activa para crear el analisis.');
+        throw new RuntimeException('No hay una organización activa para crear el análisis.');
     }
 
     $stmt = db()->prepare(
@@ -345,12 +345,12 @@ function delete_vibration_job_record(int $jobId): array
 function vibrations_call_api(string $datPath, string $mimeType, string $originalFilename, int $windowMs): array
 {
     if (!function_exists('curl_init')) {
-        return ['ok' => false, 'message' => 'La extension cURL no esta disponible en PHP.'];
+        return ['ok' => false, 'message' => 'La extensión cURL no está disponible en PHP.'];
     }
 
     $ch = curl_init(vibrations_api_url());
     if ($ch === false) {
-        return ['ok' => false, 'message' => 'No fue posible inicializar la conexion con la API.'];
+        return ['ok' => false, 'message' => 'No fue posible inicializar la conexión con la API.'];
     }
 
     curl_setopt_array($ch, [
@@ -371,18 +371,18 @@ function vibrations_call_api(string $datPath, string $mimeType, string $original
     curl_close($ch);
 
     if ($response === false) {
-        return ['ok' => false, 'message' => $error !== '' ? $error : 'La API no devolvio respuesta.'];
+        return ['ok' => false, 'message' => $error !== '' ? $error : 'La API no devolvió respuesta.'];
     }
 
     if ($httpCode < 200 || $httpCode >= 300) {
         $decodedError = json_decode((string) $response, true);
         $detail = is_array($decodedError) ? (string) ($decodedError['detail'] ?? '') : '';
-        return ['ok' => false, 'message' => $detail !== '' ? $detail : 'La API devolvio un error HTTP ' . $httpCode . '.'];
+        return ['ok' => false, 'message' => $detail !== '' ? $detail : 'La API devolvió un error HTTP ' . $httpCode . '.'];
     }
 
     $decoded = json_decode((string) $response, true);
     if (!is_array($decoded)) {
-        return ['ok' => false, 'message' => 'La API devolvio una respuesta JSON no valida.'];
+        return ['ok' => false, 'message' => 'La API devolvió una respuesta JSON no válida.'];
     }
 
     return ['ok' => true, 'payload' => $decoded];
@@ -483,14 +483,14 @@ function set_vibration_baseline(int $jobId): array
     }
 
     if ((string) ($job['status'] ?? '') !== 'completed') {
-        return ['ok' => false, 'message' => 'Solo un analisis completado puede ser baseline.'];
+        return ['ok' => false, 'message' => 'Solo un análisis completado puede ser baseline.'];
     }
 
     $organizationId = (int) ($job['organization_id'] ?? 0);
     $phenomenonId = (int) ($job['phenomenon_id'] ?? 0);
     $baselineScope = (string) ($job['baseline_scope'] ?? '');
     if ($organizationId <= 0 || ($phenomenonId <= 0 && $baselineScope === '')) {
-        return ['ok' => false, 'message' => 'El registro no tiene scope valido para baseline.'];
+        return ['ok' => false, 'message' => 'El registro no tiene scope válido para baseline.'];
     }
 
     $pdo = db();
@@ -593,11 +593,11 @@ function handle_vibrations_upload(int $userId, array $file, array $form): array
 {
     $product = vibrations_product();
     if ($product === null) {
-        return ['ok' => false, 'message' => 'Vibrations no esta configurado en la base de datos.'];
+        return ['ok' => false, 'message' => 'Vibrations no está configurado en la base de datos.'];
     }
 
     if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-        return ['ok' => false, 'message' => 'Debes adjuntar un archivo .dat valido.'];
+        return ['ok' => false, 'message' => 'Debes adjuntar un archivo .dat válido.'];
     }
 
     $tmpPath = (string) ($file['tmp_name'] ?? '');
@@ -618,18 +618,18 @@ function handle_vibrations_upload(int $userId, array $file, array $form): array
             (string) ($form['phenomenon_description'] ?? '')
         );
         if (($createPhenomenon['ok'] ?? false) !== true) {
-            return ['ok' => false, 'message' => (string) ($createPhenomenon['message'] ?? 'No fue posible crear el fenomeno observado.')];
+            return ['ok' => false, 'message' => (string) ($createPhenomenon['message'] ?? 'No fue posible crear el fenómeno observado.')];
         }
         $phenomenonId = (int) ($createPhenomenon['phenomenon_id'] ?? 0);
         $phenomenon = get_vibration_phenomenon_by_id($phenomenonId);
     }
 
     if ($phenomenon === null || (int) ($phenomenon['organization_id'] ?? 0) !== current_organization_id()) {
-        return ['ok' => false, 'message' => 'El fenomeno observado no es valido para esta organizacion.'];
+        return ['ok' => false, 'message' => 'El fenómeno observado no es válido para esta organización.'];
     }
 
     if (!can_administer_product('vibrations') && (int) ($phenomenon['user_id'] ?? 0) !== $userId) {
-        return ['ok' => false, 'message' => 'No tienes acceso a este fenomeno observado.'];
+        return ['ok' => false, 'message' => 'No tienes acceso a este fenómeno observado.'];
     }
 
     $phenomenonLabel = vibrations_trim((string) ($phenomenon['name'] ?? ''), 190);
@@ -637,15 +637,15 @@ function handle_vibrations_upload(int $userId, array $file, array $form): array
     $baselineScope = 'phenomenon:' . $phenomenonId;
 
     if ($sizeBytes <= 0) {
-        return ['ok' => false, 'message' => 'El archivo .dat esta vacio.'];
+        return ['ok' => false, 'message' => 'El archivo .dat está vacío.'];
     }
 
     if ($sizeBytes > vibrations_max_upload_bytes()) {
-        return ['ok' => false, 'message' => 'El archivo supera el tamano maximo permitido.'];
+        return ['ok' => false, 'message' => 'El archivo supera el tamaño máximo permitido.'];
     }
 
     if ($extension !== 'dat') {
-        return ['ok' => false, 'message' => 'El archivo debe tener extension .dat.'];
+        return ['ok' => false, 'message' => 'El archivo debe tener extensión .dat.'];
     }
 
     $uploadsDir = vibrations_storage_dir('uploads');
@@ -674,7 +674,7 @@ function handle_vibrations_upload(int $userId, array $file, array $form): array
         $productId,
         'vibrations_dats',
         'Vibrations DATS',
-        'API de analisis de acelerometro y giroscopio con ventanas de observacion.',
+        'API de análisis de acelerómetro y giroscopio con ventanas de observación.',
         vibrations_api_url(),
         'metricas.v1'
     );
@@ -695,7 +695,7 @@ function handle_vibrations_upload(int $userId, array $file, array $form): array
 
     $apiResult = vibrations_call_api($datPath, $mimeType, $originalFilename, $windowMs);
     if (($apiResult['ok'] ?? false) !== true) {
-        $errorMessage = (string) ($apiResult['message'] ?? 'La API devolvio un error.');
+        $errorMessage = (string) ($apiResult['message'] ?? 'La API devolvió un error.');
         finalize_vibration_job($jobId, 'failed', null, null, $errorMessage);
         finalize_analysis_job($analysisJobId, 'failed', null, $errorMessage);
         refund_product_coin($userId, 'vibrations', 'vibration_jobs', $jobId, 'Reembolso por fallo del procesamiento Vibrations');
@@ -704,10 +704,10 @@ function handle_vibrations_upload(int $userId, array $file, array $form): array
 
     $analysisPayload = $apiResult['payload'] ?? null;
     if (!is_array($analysisPayload)) {
-        finalize_vibration_job($jobId, 'failed', null, null, 'La API no devolvio un analisis interpretable.');
-        finalize_analysis_job($analysisJobId, 'failed', null, 'La API no devolvio un analisis interpretable.');
+        finalize_vibration_job($jobId, 'failed', null, null, 'La API no devolvió un análisis interpretable.');
+        finalize_analysis_job($analysisJobId, 'failed', null, 'La API no devolvió un análisis interpretable.');
         refund_product_coin($userId, 'vibrations', 'vibration_jobs', $jobId, 'Reembolso por respuesta no interpretable de Vibrations');
-        return ['ok' => false, 'message' => 'La API no devolvio un analisis interpretable.'];
+        return ['ok' => false, 'message' => 'La API no devolvió un análisis interpretable.'];
     }
 
     $analysisFilename = $baseName . '.json';
@@ -715,10 +715,10 @@ function handle_vibrations_upload(int $userId, array $file, array $form): array
     $analysisUrl = vibrations_public_url('results', $analysisFilename);
     $analysisJson = json_encode($analysisPayload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     if (!is_string($analysisJson) || file_put_contents($analysisPath, $analysisJson) === false) {
-        finalize_vibration_job($jobId, 'failed', null, null, 'No fue posible guardar el analisis generado.');
-        finalize_analysis_job($analysisJobId, 'failed', $analysisPayload, 'No fue posible guardar el analisis generado.');
-        refund_product_coin($userId, 'vibrations', 'vibration_jobs', $jobId, 'Reembolso por fallo guardando analisis Vibrations');
-        return ['ok' => false, 'message' => 'No fue posible guardar el analisis generado.'];
+        finalize_vibration_job($jobId, 'failed', null, null, 'No fue posible guardar el análisis generado.');
+        finalize_analysis_job($analysisJobId, 'failed', $analysisPayload, 'No fue posible guardar el análisis generado.');
+        refund_product_coin($userId, 'vibrations', 'vibration_jobs', $jobId, 'Reembolso por fallo guardando análisis Vibrations');
+        return ['ok' => false, 'message' => 'No fue posible guardar el análisis generado.'];
     }
 
     $baseline = null;
@@ -735,14 +735,14 @@ function handle_vibrations_upload(int $userId, array $file, array $form): array
     try {
         persist_analysis_metrics($analysisJobId, $userId, $productId, vibrations_metric_rows_from_analysis($analysisPayload));
     } catch (Throwable) {
-        finalize_vibration_job($jobId, 'failed', $analysisPath, $analysisUrl, 'No fue posible persistir las metricas del analisis.');
-        finalize_analysis_job($analysisJobId, 'failed', $analysisPayload, 'No fue posible persistir las metricas del analisis.');
-        refund_product_coin($userId, 'vibrations', 'vibration_jobs', $jobId, 'Reembolso por fallo persistiendo metricas Vibrations');
-        return ['ok' => false, 'message' => 'El analisis se genero, pero no fue posible persistir sus metricas.'];
+        finalize_vibration_job($jobId, 'failed', $analysisPath, $analysisUrl, 'No fue posible persistir las métricas del análisis.');
+        finalize_analysis_job($analysisJobId, 'failed', $analysisPayload, 'No fue posible persistir las métricas del análisis.');
+        refund_product_coin($userId, 'vibrations', 'vibration_jobs', $jobId, 'Reembolso por fallo persistiendo métricas Vibrations');
+        return ['ok' => false, 'message' => 'El análisis se generó, pero no fue posible persistir sus métricas.'];
     }
 
     persist_analysis_artifact($analysisJobId, 'input_dats', $originalFilename, $mimeType, $datPath, $datUrl, ['window_ms' => $windowMs]);
-    persist_analysis_artifact($analysisJobId, 'analysis_json', 'Analisis Vibrations', 'application/json', $analysisPath, $analysisUrl, ['schema' => 'vibrations.v1']);
+    persist_analysis_artifact($analysisJobId, 'analysis_json', 'Análisis Vibrations', 'application/json', $analysisPath, $analysisUrl, ['schema' => 'vibrations.v1']);
     finalize_vibration_job($jobId, 'completed', $analysisPath, $analysisUrl, null, $baselineJobId, $baselineDistanceScore, $baselineSummary);
     finalize_analysis_job($analysisJobId, 'completed', $analysisPayload, null);
 

@@ -1,5 +1,5 @@
 INSERT INTO products (code, name, description, is_public, is_active, sort_order)
-VALUES ('vibrations', 'Vibrations', 'Analisis de acelerometro y giroscopio para seguimiento de vibraciones y cambios anomalos.', 1, 1, 12)
+VALUES ('vibrations', 'Vibrations', 'Análisis de acelerómetro y giroscopio para seguimiento de vibraciones y cambios anómalos.', 1, 1, 12)
 ON DUPLICATE KEY UPDATE
   name = VALUES(name),
   description = VALUES(description),
@@ -11,9 +11,9 @@ INSERT INTO roles (product_id, code, name, description)
 SELECT p.id, role_seed.code, role_seed.name, role_seed.description
 FROM products p
 INNER JOIN (
-  SELECT 'admin' AS code, 'Admin' AS name, 'Gestion del producto, usuarios e historial.' AS description
+  SELECT 'admin' AS code, 'Admin' AS name, 'Gestión del producto, usuarios e historial.' AS description
   UNION ALL
-  SELECT 'user', 'User', 'Carga de archivos DATS y revision de sus propios analisis.'
+  SELECT 'user', 'User', 'Carga de archivos DATS y revisión de sus propios análisis.'
 ) role_seed
 WHERE p.code = 'vibrations'
 ON DUPLICATE KEY UPDATE

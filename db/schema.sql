@@ -466,7 +466,7 @@ CREATE TABLE vibration_jobs (
 INSERT INTO products (code, name, description, is_public, is_active, sort_order)
 VALUES
   ('audioprint', 'Audioprint', 'Solucion para subir audios y generar su analisis.', 1, 1, 10),
-  ('vibrations', 'Vibrations', 'Analisis de acelerometro y giroscopio para seguimiento de vibraciones y cambios anomalos.', 1, 1, 12),
+  ('vibrations', 'Vibrations', 'Análisis de acelerómetro y giroscopio para seguimiento de vibraciones y cambios anómalos.', 1, 1, 12),
   ('audiometer', 'Audiometer', 'Screening auditivo orientativo con tonos puros, audiograma relativo e historial de pruebas.', 1, 1, 15),
   ('qvoice', 'Qvoice', 'Solucion orientada al seguimiento de la voz humana en entornos laborales.', 1, 1, 20),
   ('smart_tales', 'Smart Tales', 'Cuentos personalizados con voces familiares, perfiles infantiles e historial narrativo.', 1, 1, 30)
@@ -485,9 +485,9 @@ JOIN (
   UNION ALL
   SELECT 'audioprint', 'user', 'User', 'Uso normal del producto y gestión de sus propios audios.'
   UNION ALL
-  SELECT 'vibrations', 'admin', 'Admin', 'Gestion del producto, usuarios e historial.'
+  SELECT 'vibrations', 'admin', 'Admin', 'Gestión del producto, usuarios e historial.'
   UNION ALL
-  SELECT 'vibrations', 'user', 'User', 'Carga de archivos DATS y revision de sus propios analisis.'
+  SELECT 'vibrations', 'user', 'User', 'Carga de archivos DATS y revisión de sus propios análisis.'
   UNION ALL
   SELECT 'audiometer', 'admin', 'Admin', 'Gestion del producto, usuarios e historial.'
   UNION ALL

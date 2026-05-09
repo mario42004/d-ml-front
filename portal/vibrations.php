@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $token = $_POST['csrf_token'] ?? null;
 
     if (!verify_csrf(is_string($token) ? $token : null)) {
-        $message = 'La sesion del formulario no es valida. Recarga la pagina e intentalo de nuevo.';
+        $message = 'La sesión del formulario no es válida. Recarga la página e inténtalo de nuevo.';
         $messageType = 'error';
     } else {
         $action = (string) ($_POST['action'] ?? 'upload');
@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $messageType = 'error';
             } else {
                 $result = handle_vibrations_upload((int) $user['id'], $upload, $_POST);
-                $message = ($result['ok'] ?? false) ? 'Archivo DATS procesado correctamente. Ya puedes revisar el analisis.' : (string) ($result['message'] ?? 'No fue posible procesar el archivo.');
+                $message = ($result['ok'] ?? false) ? 'Archivo DATS procesado correctamente. Ya puedes revisar el análisis.' : (string) ($result['message'] ?? 'No fue posible procesar el archivo.');
                 $messageType = ($result['ok'] ?? false) ? 'success' : 'error';
             }
         }
@@ -91,19 +91,19 @@ $selectedJobId = (int) ($_GET['job_id'] ?? 0);
 if ($selectedJobId > 0) {
     $candidateJob = get_vibration_job_by_id($selectedJobId);
     if ($candidateJob === null) {
-        $message = 'El analisis solicitado no existe.';
+        $message = 'El análisis solicitado no existe.';
         $messageType = 'error';
     } elseif (!is_system_admin() && (int) ($candidateJob['organization_id'] ?? 0) !== $currentOrganizationId) {
-        $message = 'No tienes permisos para consultar este analisis.';
+        $message = 'No tienes permisos para consultar este análisis.';
         $messageType = 'error';
     } elseif (!$canAdministerVibrations && (int) $candidateJob['user_id'] !== (int) $user['id']) {
-        $message = 'No tienes permisos para consultar este analisis.';
+        $message = 'No tienes permisos para consultar este análisis.';
         $messageType = 'error';
     } else {
         $selectedJob = $candidateJob;
         $selectedAnalysis = vibrations_load_analysis_for_job($candidateJob);
         if (!is_array($selectedAnalysis)) {
-            $message = 'Este registro todavia no tiene un analisis disponible.';
+            $message = 'Este registro todavía no tiene un análisis disponible.';
             $messageType = 'error';
             $selectedJob = null;
         }
@@ -115,15 +115,15 @@ $failedJobs = count(array_filter($jobs, static fn(array $job): bool => ($job['st
 $baselineJobs = count(array_filter($jobs, static fn(array $job): bool => (int) ($job['is_baseline'] ?? 0) === 1));
 $csrfToken = csrf_token();
 
-render_app_header('Vibrations | Analisis DATS');
+render_app_header('Vibrations | Análisis DATS');
 ?>
 <section class="page-stack">
   <section class="hero">
     <div class="dashboard-hero">
       <div>
         <span class="role-badge">Vibrations</span>
-        <h1>Analisis de acelerometro y giroscopio por ventanas de observacion.</h1>
-        <p class="lead">Carga archivos <code>.dat</code> capturados por sensores inerciales. La API calcula metricas globales y ventanas de 500 ms para detectar vibraciones fuertes, cambios bruscos y senales que puedan alimentar un baseline historico.</p>
+        <h1>Análisis de acelerómetro y giroscopio por ventanas de observación.</h1>
+        <p class="lead">Carga archivos <code>.dat</code> capturados por sensores inerciales. La API calcula métricas globales y ventanas de 500 ms para detectar vibraciones fuertes, cambios bruscos y señales que puedan alimentar un baseline histórico.</p>
       </div>
       <div class="stats-grid">
         <article class="stat-card">
@@ -132,11 +132,11 @@ render_app_header('Vibrations | Analisis DATS');
         </article>
         <article class="stat-card">
           <strong><?= count($phenomena) ?></strong>
-          <span>fenomenos activos</span>
+          <span>fenómenos activos</span>
         </article>
         <article class="stat-card">
           <strong><?= $completedJobs ?></strong>
-          <span>analisis completos</span>
+          <span>análisis completos</span>
         </article>
         <article class="stat-card">
           <strong><?= $baselineJobs ?></strong>
@@ -148,7 +148,7 @@ render_app_header('Vibrations | Analisis DATS');
 
   <?php if ($message !== null): ?>
     <div class="message <?= $messageType === 'error' ? 'is-error' : 'is-success' ?>">
-      <strong><?= $messageType === 'error' ? 'Revision necesaria' : 'Operacion completada' ?></strong>
+      <strong><?= $messageType === 'error' ? 'Revisión necesaria' : 'Operación completada' ?></strong>
       <span><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></span>
     </div>
   <?php endif; ?>
@@ -184,7 +184,7 @@ render_app_header('Vibrations | Analisis DATS');
       <div class="audioprint-summary-grid">
         <article class="stat-card">
           <strong><?= vibrations_format_value($capture['duration_seconds'] ?? null, 's') ?></strong>
-          <span>duracion</span>
+          <span>duración</span>
         </article>
         <article class="stat-card">
           <strong><?= htmlspecialchars(implode(', ', array_map('strval', $sensors)), ENT_QUOTES, 'UTF-8') ?></strong>
@@ -199,7 +199,7 @@ render_app_header('Vibrations | Analisis DATS');
           <span>ventanas fuertes</span>
         </article>
         <article class="stat-card">
-          <strong><?= ((int) ($selectedJob['is_baseline'] ?? 0)) === 1 ? 'Si' : vibrations_format_value($selectedJob['baseline_distance_score'] ?? null, '%') ?></strong>
+          <strong><?= ((int) ($selectedJob['is_baseline'] ?? 0)) === 1 ? 'Sí' : vibrations_format_value($selectedJob['baseline_distance_score'] ?? null, '%') ?></strong>
           <span><?= ((int) ($selectedJob['is_baseline'] ?? 0)) === 1 ? 'baseline activo' : 'distancia al baseline' ?></span>
         </article>
       </div>
@@ -210,7 +210,7 @@ render_app_header('Vibrations | Analisis DATS');
             <thead>
               <tr>
                 <th>Baseline</th>
-                <th>Metricas comparadas</th>
+                <th>Métricas comparadas</th>
                 <th>Distancia</th>
                 <th>Severidad</th>
               </tr>
@@ -232,7 +232,7 @@ render_app_header('Vibrations | Analisis DATS');
             <table>
               <thead>
                 <tr>
-                  <th>Metrica</th>
+                  <th>Métrica</th>
                   <th>Baseline</th>
                   <th>Actual</th>
                   <th>Diferencia</th>
@@ -255,7 +255,7 @@ render_app_header('Vibrations | Analisis DATS');
       <?php elseif (((int) ($selectedJob['is_baseline'] ?? 0)) !== 1): ?>
         <div class="message is-success">
           <strong>Sin baseline comparable</strong>
-          <span>Marca una captura completada del mismo fenomeno o ID externo como baseline para comparar nuevos archivos.</span>
+          <span>Marca una captura completada del mismo fenómeno o ID externo como baseline para comparar nuevos archivos.</span>
         </div>
       <?php endif; ?>
 
@@ -266,8 +266,8 @@ render_app_header('Vibrations | Analisis DATS');
               <th>Sensor</th>
               <th>Muestras</th>
               <th>Frecuencia</th>
-              <th>RMS dinamico</th>
-              <th>Pico dinamico</th>
+              <th>RMS dinámico</th>
+              <th>Pico dinámico</th>
               <th>Jerk RMS</th>
               <th>Frecuencia dominante</th>
             </tr>
@@ -282,7 +282,7 @@ render_app_header('Vibrations | Analisis DATS');
                 <td><?= htmlspecialchars(vibrations_format_value(vibrations_analysis_stat($selectedAnalysis, $sensor, 'dynamic.rms')), ENT_QUOTES, 'UTF-8') ?></td>
                 <td><?= htmlspecialchars(vibrations_format_value(vibrations_analysis_stat($selectedAnalysis, $sensor, 'dynamic.peak_abs')), ENT_QUOTES, 'UTF-8') ?></td>
                 <td><?= htmlspecialchars(vibrations_format_value(vibrations_analysis_stat($selectedAnalysis, $sensor, 'jerk.rms')), ENT_QUOTES, 'UTF-8') ?></td>
-                <td><?= htmlspecialchars(vibrations_format_value(vibrations_analysis_stat($selectedAnalysis, $sensor, 'spectrum.frequency_hz'), 'Hz'), ENT_QUOTES, 'UTF-8') ?></td>
+                <td><?= htmlspecialchars(vibrations_format_value(vibrations_analysis_stat($selectedAnalysis, $sensor, 'spectrum.dominant_frequency_hz'), 'Hz'), ENT_QUOTES, 'UTF-8') ?></td>
               </tr>
             <?php endforeach; ?>
           </tbody>
@@ -296,7 +296,7 @@ render_app_header('Vibrations | Analisis DATS');
               if (!is_array($plot) || !is_string($plot['image_base64'] ?? null)) {
                   continue;
               }
-              $plotTitle = (string) ($plot['title'] ?? 'Grafico');
+              $plotTitle = (string) ($plot['title'] ?? 'Gráfico');
               $contentType = (string) ($plot['content_type'] ?? 'image/png');
             ?>
             <article class="card">
@@ -317,7 +317,7 @@ render_app_header('Vibrations | Analisis DATS');
               <th>Sensor</th>
               <th>Score</th>
               <th>Severidad</th>
-              <th>RMS dinamico</th>
+              <th>RMS dinámico</th>
               <th>Pico</th>
             </tr>
           </thead>
@@ -346,15 +346,15 @@ render_app_header('Vibrations | Analisis DATS');
   <article class="card">
     <div class="section-heading">
       <div>
-        <span class="section-tag">Fenomenos</span>
-        <h2>Fenomenos observados a tu cargo</h2>
-        <p>Cada fenomeno mantiene su propio historial, baseline y distancia de cambio. Las mediciones de un equipo no se mezclan con las de otro.</p>
+        <span class="section-tag">Fenómenos</span>
+        <h2>Fenómenos observados a tu cargo</h2>
+        <p>Cada fenómeno mantiene su propio historial, baseline y distancia de cambio. Las mediciones de un equipo no se mezclan con las de otro.</p>
       </div>
     </div>
 
     <?php if ($phenomena === []): ?>
       <div class="message is-success">
-        <strong>Sin fenomenos todavia</strong>
+        <strong>Sin fenómenos todavía</strong>
         <span>Crea el primero al cargar un archivo DATS.</span>
       </div>
     <?php else: ?>
@@ -410,9 +410,9 @@ render_app_header('Vibrations | Analisis DATS');
 
   <section class="panel-grid">
     <article class="card">
-      <span class="section-tag">Nuevo analisis</span>
+      <span class="section-tag">Nuevo análisis</span>
       <h2>Cargar archivo DATS</h2>
-      <p>Selecciona el fenomeno observado antes de cargar la captura. Si es nuevo, deja el selector en crear y completa su identificacion.</p>
+      <p>Selecciona el fenómeno observado antes de cargar la captura. Si es nuevo, deja el selector en crear y completa su identificación.</p>
 
       <form method="post" action="/portal/vibrations.php" enctype="multipart/form-data" class="form-block">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
@@ -420,9 +420,9 @@ render_app_header('Vibrations | Analisis DATS');
 
         <?php if ($phenomena !== []): ?>
           <div>
-            <label for="phenomenon_id">Fenomeno observado existente</label>
+            <label for="phenomenon_id">Fenómeno observado existente</label>
             <select id="phenomenon_id" name="phenomenon_id">
-              <option value="0">Crear nuevo fenomeno</option>
+              <option value="0">Crear nuevo fenómeno</option>
               <?php foreach ($phenomena as $phenomenon): ?>
                 <option value="<?= (int) $phenomenon['id'] ?>">
                   <?= htmlspecialchars((string) $phenomenon['name'] . ((string) ($phenomenon['external_id'] ?? '') !== '' ? ' · ' . (string) $phenomenon['external_id'] : ''), ENT_QUOTES, 'UTF-8') ?>
@@ -434,7 +434,7 @@ render_app_header('Vibrations | Analisis DATS');
 
         <div class="form-grid two">
           <div>
-            <label for="phenomenon_label">Nuevo fenomeno observado</label>
+            <label for="phenomenon_label">Nuevo fenómeno observado</label>
             <input id="phenomenon_label" name="phenomenon_label" type="text" maxlength="190" placeholder="Motor, carro, bomba, estructura">
           </div>
           <div>
@@ -444,13 +444,13 @@ render_app_header('Vibrations | Analisis DATS');
         </div>
 
         <div>
-          <label for="phenomenon_description">Descripcion del fenomeno</label>
-          <input id="phenomenon_description" name="phenomenon_description" type="text" maxlength="255" placeholder="Contexto, ubicacion, montaje o condicion de medicion">
+          <label for="phenomenon_description">Descripción del fenómeno</label>
+          <input id="phenomenon_description" name="phenomenon_description" type="text" maxlength="255" placeholder="Contexto, ubicación, montaje o condición de medición">
         </div>
 
         <div class="form-grid two">
           <div>
-            <label for="window_ms">Ventana de observacion</label>
+            <label for="window_ms">Ventana de observación</label>
             <select id="window_ms" name="window_ms">
               <option value="500" selected>500 ms</option>
               <option value="250">250 ms</option>
@@ -469,12 +469,12 @@ render_app_header('Vibrations | Analisis DATS');
 
     <article class="card">
       <span class="section-tag">Baseline</span>
-      <h2>Comparacion por fenomeno</h2>
-      <p>El primer objetivo es fijar una captura representativa para cada fenomeno. A partir de ahi, cada nuevo archivo se compara contra ese punto de referencia.</p>
+      <h2>Comparación por fenómeno</h2>
+      <p>El primer objetivo es fijar una captura representativa para cada fenómeno. A partir de ahí, cada nuevo archivo se compara contra ese punto de referencia.</p>
       <ul class="service-list">
-        <li>Marca un analisis completado como baseline desde su historial.</li>
-        <li>Las distancias se calculan solo dentro del mismo fenomeno.</li>
-        <li>Los cambios fuertes quedan visibles en ventanas de observacion.</li>
+        <li>Marca un análisis completado como baseline desde su historial.</li>
+        <li>Las distancias se calculan solo dentro del mismo fenómeno.</li>
+        <li>Los cambios fuertes quedan visibles en ventanas de observación.</li>
       </ul>
     </article>
   </section>
@@ -487,7 +487,7 @@ render_app_header('Vibrations | Analisis DATS');
         <thead>
           <tr>
             <th>Fecha</th>
-            <th>Fenomeno</th>
+            <th>Fenómeno</th>
             <th>Archivo</th>
             <th>Ventana</th>
             <th>Baseline</th>
@@ -497,7 +497,7 @@ render_app_header('Vibrations | Analisis DATS');
         </thead>
         <tbody>
           <?php if ($jobs === []): ?>
-            <tr><td colspan="7">Todavia no hay archivos DATS procesados.</td></tr>
+            <tr><td colspan="7">Todavía no hay archivos DATS procesados.</td></tr>
           <?php endif; ?>
           <?php foreach ($jobs as $job): ?>
             <tr>
@@ -519,7 +519,7 @@ render_app_header('Vibrations | Analisis DATS');
                 <?php if (($job['status'] ?? '') === 'completed'): ?>
                   <a class="button-secondary" href="/portal/vibrations.php?job_id=<?= (int) $job['id'] ?>#vibrations-report">Ver</a>
                   <?php if ((int) ($job['is_baseline'] ?? 0) !== 1): ?>
-                    <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('Usar este analisis como baseline para este fenomeno?');">
+                    <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('¿Usar este análisis como baseline para este fenómeno?');">
                       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                       <input type="hidden" name="action" value="set_baseline">
                       <input type="hidden" name="job_id" value="<?= (int) $job['id'] ?>">
@@ -538,14 +538,14 @@ render_app_header('Vibrations | Analisis DATS');
   <?php if ($canAdministerVibrations): ?>
     <article class="card">
       <span class="section-tag">Admin</span>
-      <h2>Ultimos analisis del producto</h2>
+      <h2>Últimos análisis del producto</h2>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th>Fecha</th>
               <th>Usuario</th>
-              <th>Fenomeno</th>
+              <th>Fenómeno</th>
               <th>Archivo</th>
               <th>Baseline</th>
               <th>Estado</th>
@@ -573,7 +573,7 @@ render_app_header('Vibrations | Analisis DATS');
                   <?php if (($job['status'] ?? '') === 'completed'): ?>
                     <a class="button-secondary" href="/portal/vibrations.php?job_id=<?= (int) $job['id'] ?>#vibrations-report">Ver</a>
                     <?php if ((int) ($job['is_baseline'] ?? 0) !== 1): ?>
-                      <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('Usar este analisis como baseline para este fenomeno?');">
+                      <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('¿Usar este análisis como baseline para este fenómeno?');">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                         <input type="hidden" name="action" value="set_baseline">
                         <input type="hidden" name="job_id" value="<?= (int) $job['id'] ?>">
@@ -581,7 +581,7 @@ render_app_header('Vibrations | Analisis DATS');
                       </form>
                     <?php endif; ?>
                   <?php endif; ?>
-                  <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('Eliminar este analisis?');">
+                  <form method="post" action="/portal/vibrations.php" class="inline-form" onsubmit="return confirm('¿Eliminar este análisis?');">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
                     <input type="hidden" name="action" value="delete_job">
                     <input type="hidden" name="job_id" value="<?= (int) $job['id'] ?>">

@@ -82,7 +82,7 @@ $adminJobs = $canAdministerVibrations ? list_recent_vibration_jobs(50, $currentO
 $phenomena = list_vibration_phenomena_for_user((int) $user['id'], $currentOrganizationId, $canAdministerVibrations);
 $jobsByPhenomenon = [];
 foreach ($phenomena as $phenomenon) {
-    $jobsByPhenomenon[(int) $phenomenon['id']] = list_vibration_jobs_by_phenomenon((int) $phenomenon['id'], 4);
+    $jobsByPhenomenon[(int) $phenomenon['id']] = list_vibration_jobs_by_phenomenon((int) $phenomenon['id'], 30);
 }
 $vibrationsCoins = product_coin_balance((int) $user['id'], 'vibrations');
 $selectedJob = null;
@@ -141,6 +141,136 @@ function vibrations_output_metrics_csv(array $analysis, string $filename): never
 
     fclose($output);
     exit;
+}
+
+function vibrations_trend_metric_value(array $analysis, string $metricKey, ?string $sensor = null, ?string $path = null): ?float
+{
+    $metrics = vibrations_numeric_metrics_from_analysis($analysis);
+    if (is_numeric($metrics[$metricKey] ?? null)) {
+        return (float) $metrics[$metricKey];
+    }
+
+    if ($sensor !== null && $path !== null) {
+        $value = vibrations_analysis_stat($analysis, $sensor, $path);
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+    }
+
+    return null;
+}
+
+function vibrations_trend_points(array $jobs, array $definition): array
+{
+    $points = [];
+    $orderedJobs = array_reverse($jobs);
+    foreach ($orderedJobs as $job) {
+        if (($job['status'] ?? '') !== 'completed') {
+            continue;
+        }
+
+        $analysis = vibrations_load_analysis_for_job($job);
+        if (!is_array($analysis)) {
+            continue;
+        }
+
+        $value = vibrations_trend_metric_value(
+            $analysis,
+            (string) $definition['key'],
+            $definition['sensor'] ?? null,
+            $definition['path'] ?? null
+        );
+        if ($value === null) {
+            continue;
+        }
+
+        $points[] = [
+            'job_id' => (int) $job['id'],
+            'label' => (string) ($job['processed_at'] ?: $job['created_at']),
+            'value' => $value,
+            'is_baseline' => (int) ($job['is_baseline'] ?? 0) === 1,
+        ];
+    }
+
+    return $points;
+}
+
+function vibrations_svg_polyline(array $points, ?float $baselineValue = null): string
+{
+    if ($points === []) {
+        return '<div class="message is-success"><strong>Sin datos suficientes</strong><span>Sube más capturas completadas para ver la evolución.</span></div>';
+    }
+
+    $values = array_map(static fn(array $point): float => (float) $point['value'], $points);
+    if ($baselineValue !== null) {
+        $values[] = $baselineValue;
+    }
+
+    $min = min($values);
+    $max = max($values);
+    if (abs($max - $min) < 0.000001) {
+        $min -= 1.0;
+        $max += 1.0;
+    }
+
+    $width = 520;
+    $height = 180;
+    $left = 38;
+    $right = 16;
+    $top = 16;
+    $bottom = 30;
+    $plotWidth = $width - $left - $right;
+    $plotHeight = $height - $top - $bottom;
+    $count = count($points);
+
+    $coords = [];
+    foreach ($points as $index => $point) {
+        $x = $left + ($count === 1 ? $plotWidth / 2 : ($plotWidth * $index / ($count - 1)));
+        $ratio = ((float) $point['value'] - $min) / ($max - $min);
+        $y = $top + $plotHeight - ($ratio * $plotHeight);
+        $coords[] = round($x, 2) . ',' . round($y, 2);
+    }
+
+    $baselineLine = '';
+    if ($baselineValue !== null) {
+        $ratio = ($baselineValue - $min) / ($max - $min);
+        $baselineY = $top + $plotHeight - ($ratio * $plotHeight);
+        $baselineLine = '<line class="vibrations-chart-baseline" x1="' . $left . '" y1="' . round($baselineY, 2) . '" x2="' . ($width - $right) . '" y2="' . round($baselineY, 2) . '"></line>';
+    }
+
+    $dots = '';
+    foreach ($points as $index => $point) {
+        [$x, $y] = explode(',', $coords[$index]);
+        $class = !empty($point['is_baseline']) ? 'vibrations-chart-dot is-baseline' : 'vibrations-chart-dot';
+        $dots .= '<circle class="' . $class . '" cx="' . htmlspecialchars($x, ENT_QUOTES, 'UTF-8') . '" cy="' . htmlspecialchars($y, ENT_QUOTES, 'UTF-8') . '" r="4"></circle>';
+    }
+
+    return '<svg class="vibrations-trend-chart" viewBox="0 0 ' . $width . ' ' . $height . '" role="img" aria-label="Evolución de métrica frente al baseline">'
+        . '<line class="vibrations-chart-axis" x1="' . $left . '" y1="' . ($height - $bottom) . '" x2="' . ($width - $right) . '" y2="' . ($height - $bottom) . '"></line>'
+        . '<line class="vibrations-chart-axis" x1="' . $left . '" y1="' . $top . '" x2="' . $left . '" y2="' . ($height - $bottom) . '"></line>'
+        . $baselineLine
+        . '<polyline class="vibrations-chart-line" points="' . htmlspecialchars(implode(' ', $coords), ENT_QUOTES, 'UTF-8') . '"></polyline>'
+        . $dots
+        . '<text class="vibrations-chart-label" x="' . $left . '" y="' . ($height - 8) . '">' . htmlspecialchars(vibrations_format_value($min), ENT_QUOTES, 'UTF-8') . '</text>'
+        . '<text class="vibrations-chart-label" x="' . ($width - 112) . '" y="' . ($height - 8) . '">' . htmlspecialchars(vibrations_format_value($max), ENT_QUOTES, 'UTF-8') . '</text>'
+        . '</svg>';
+}
+
+function vibrations_distance_svg(array $jobs): string
+{
+    $points = [];
+    foreach (array_reverse($jobs) as $job) {
+        if (($job['status'] ?? '') !== 'completed' || !is_numeric($job['baseline_distance_score'] ?? null)) {
+            continue;
+        }
+        $points[] = [
+            'value' => (float) $job['baseline_distance_score'],
+            'is_baseline' => (int) ($job['is_baseline'] ?? 0) === 1,
+            'label' => (string) ($job['processed_at'] ?: $job['created_at']),
+        ];
+    }
+
+    return vibrations_svg_polyline($points, 0.0);
 }
 
 function vibrations_scalar_csv_value(mixed $value): string
@@ -261,6 +391,9 @@ render_app_header('Vibrations | Análisis DATS');
           <strong><?= $baselineJobs ?></strong>
           <span>baselines activos</span>
         </article>
+      </div>
+      <div class="table-actions">
+        <a class="button-secondary" href="#baseline-dashboard">Ver comparación baseline</a>
       </div>
     </div>
   </section>
@@ -503,6 +636,107 @@ render_app_header('Vibrations | Análisis DATS');
               </div>
             <?php endif; ?>
           </article>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </article>
+
+  <article class="card" id="baseline-dashboard">
+    <div class="section-heading">
+      <div>
+        <span class="section-tag">Comparación baseline</span>
+        <h2>Evolución por fenómeno</h2>
+        <p>Este cuadro resume cómo se alejan las capturas del baseline. La línea punteada marca el valor base cuando existe; los puntos muestran las capturas completadas en orden temporal.</p>
+      </div>
+    </div>
+
+    <?php
+      $trendDefinitions = [
+          [
+              'key' => 'accelerometer_dynamic_rms',
+              'label' => 'Acelerómetro RMS dinámico',
+              'sensor' => 'accelerometer',
+              'path' => 'dynamic.rms',
+          ],
+          [
+              'key' => 'gyroscope_dynamic_rms',
+              'label' => 'Giroscopio RMS dinámico',
+              'sensor' => 'gyroscope',
+              'path' => 'dynamic.rms',
+          ],
+          [
+              'key' => 'accelerometer_jerk_rms',
+              'label' => 'Acelerómetro jerk RMS',
+              'sensor' => 'accelerometer',
+              'path' => 'jerk.rms',
+          ],
+      ];
+    ?>
+
+    <?php if ($phenomena === []): ?>
+      <div class="message is-success">
+        <strong>Sin fenómenos todavía</strong>
+        <span>Cuando cargues capturas, aquí aparecerá la evolución contra baseline.</span>
+      </div>
+    <?php else: ?>
+      <div class="vibrations-baseline-grid">
+        <?php foreach ($phenomena as $phenomenon): ?>
+          <?php
+            $phenomenonJobs = $jobsByPhenomenon[(int) $phenomenon['id']] ?? [];
+            $completedPhenomenonJobs = array_values(array_filter($phenomenonJobs, static fn(array $job): bool => ($job['status'] ?? '') === 'completed'));
+            $latestCompletedJob = $completedPhenomenonJobs[0] ?? null;
+            $baselineJobId = (int) ($phenomenon['baseline_job_id'] ?? 0);
+            $baselineJob = $baselineJobId > 0 ? get_vibration_job_by_id($baselineJobId) : null;
+            $baselineAnalysis = is_array($baselineJob) ? vibrations_load_analysis_for_job($baselineJob) : null;
+          ?>
+          <section class="vibrations-baseline-card">
+            <div class="vibrations-baseline-head">
+              <div>
+                <strong><?= htmlspecialchars((string) $phenomenon['name'], ENT_QUOTES, 'UTF-8') ?></strong>
+                <?php if ((string) ($phenomenon['external_id'] ?? '') !== ''): ?>
+                  <span><?= htmlspecialchars((string) $phenomenon['external_id'], ENT_QUOTES, 'UTF-8') ?></span>
+                <?php endif; ?>
+              </div>
+              <span class="status-pill <?= $baselineJobId > 0 ? 'is-active' : 'is-inactive' ?>"><?= $baselineJobId > 0 ? 'Baseline #' . $baselineJobId : 'Sin baseline' ?></span>
+            </div>
+
+            <div class="vibrations-baseline-summary">
+              <span>
+                <strong><?= $latestCompletedJob !== null && is_numeric($latestCompletedJob['baseline_distance_score'] ?? null) ? htmlspecialchars(vibrations_format_value($latestCompletedJob['baseline_distance_score'], '%'), ENT_QUOTES, 'UTF-8') : 'n/d' ?></strong>
+                última distancia
+              </span>
+              <span>
+                <strong><?= count($completedPhenomenonJobs) ?></strong>
+                capturas completadas
+              </span>
+            </div>
+
+            <div class="vibrations-trend-panel">
+              <div>
+                <strong>Distancia al baseline</strong>
+                <span>0% representa el punto base; valores altos indican mayor desviación.</span>
+              </div>
+              <?= vibrations_distance_svg($phenomenonJobs) ?>
+            </div>
+
+            <div class="vibrations-trend-grid">
+              <?php foreach ($trendDefinitions as $definition): ?>
+                <?php
+                  $points = vibrations_trend_points($phenomenonJobs, $definition);
+                  $baselineValue = is_array($baselineAnalysis)
+                      ? vibrations_trend_metric_value($baselineAnalysis, (string) $definition['key'], $definition['sensor'] ?? null, $definition['path'] ?? null)
+                      : null;
+                ?>
+                <div class="vibrations-trend-panel">
+                  <div>
+                    <strong><?= htmlspecialchars((string) $definition['label'], ENT_QUOTES, 'UTF-8') ?></strong>
+                    <span><?= $baselineValue !== null ? 'Baseline: ' . htmlspecialchars(vibrations_format_value($baselineValue), ENT_QUOTES, 'UTF-8') : 'Define un baseline para comparar.' ?></span>
+                  </div>
+                  <?= vibrations_svg_polyline($points, $baselineValue) ?>
+                </div>
+              <?php endforeach; ?>
+            </div>
+          </section>
         <?php endforeach; ?>
       </div>
     <?php endif; ?>

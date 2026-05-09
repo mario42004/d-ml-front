@@ -764,7 +764,7 @@ function list_vibration_jobs_for_user(int $userId, ?int $organizationId = null):
 function list_vibration_jobs_by_phenomenon(int $phenomenonId, int $limit = 5): array
 {
     ensure_vibrations_schema();
-    $limit = max(1, min($limit, 20));
+    $limit = max(1, min($limit, 100));
 
     $stmt = db()->prepare(
         "SELECT id, user_id, organization_id, product_id, phenomenon_id, original_filename, phenomenon_label, external_id, baseline_scope, is_baseline, baseline_job_id, baseline_distance_score, baseline_summary_json, dat_size_bytes, dat_url, analysis_path, analysis_url, window_ms, status, error_message, created_at, processed_at

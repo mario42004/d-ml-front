@@ -80,6 +80,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $jobs = list_vibration_jobs_for_user((int) $user['id'], $currentOrganizationId);
 $adminJobs = $canAdministerVibrations ? list_recent_vibration_jobs(50, $currentOrganizationId) : [];
 $phenomena = list_vibration_phenomena_for_user((int) $user['id'], $currentOrganizationId, $canAdministerVibrations);
+$jobsByPhenomenon = [];
+foreach ($phenomena as $phenomenon) {
+    $jobsByPhenomenon[(int) $phenomenon['id']] = list_vibration_jobs_by_phenomenon((int) $phenomenon['id'], 4);
+}
 $vibrationsCoins = product_coin_balance((int) $user['id'], 'vibrations');
 $selectedJob = null;
 $selectedAnalysis = null;
@@ -339,11 +343,76 @@ render_app_header('Vibrations | Analisis DATS');
     </article>
   <?php endif; ?>
 
+  <article class="card">
+    <div class="section-heading">
+      <div>
+        <span class="section-tag">Fenomenos</span>
+        <h2>Fenomenos observados a tu cargo</h2>
+        <p>Cada fenomeno mantiene su propio historial, baseline y distancia de cambio. Las mediciones de un equipo no se mezclan con las de otro.</p>
+      </div>
+    </div>
+
+    <?php if ($phenomena === []): ?>
+      <div class="message is-success">
+        <strong>Sin fenomenos todavia</strong>
+        <span>Crea el primero al cargar un archivo DATS.</span>
+      </div>
+    <?php else: ?>
+      <div class="vibrations-phenomena-grid">
+        <?php foreach ($phenomena as $phenomenon): ?>
+          <?php
+            $phenomenonJobs = $jobsByPhenomenon[(int) $phenomenon['id']] ?? [];
+            $latestJob = $phenomenonJobs[0] ?? null;
+            $completedCount = count(array_filter($phenomenonJobs, static fn(array $job): bool => ($job['status'] ?? '') === 'completed'));
+          ?>
+          <article class="vibrations-phenomenon-card">
+            <div class="vibrations-phenomenon-head">
+              <div>
+                <strong><?= htmlspecialchars((string) $phenomenon['name'], ENT_QUOTES, 'UTF-8') ?></strong>
+                <?php if ((string) ($phenomenon['external_id'] ?? '') !== ''): ?>
+                  <span><?= htmlspecialchars((string) $phenomenon['external_id'], ENT_QUOTES, 'UTF-8') ?></span>
+                <?php endif; ?>
+              </div>
+              <span class="status-pill"><?= ((int) ($phenomenon['baseline_job_id'] ?? 0)) > 0 ? 'Baseline #' . (int) $phenomenon['baseline_job_id'] : 'Sin baseline' ?></span>
+            </div>
+
+            <?php if ((string) ($phenomenon['description'] ?? '') !== ''): ?>
+              <p><?= htmlspecialchars((string) $phenomenon['description'], ENT_QUOTES, 'UTF-8') ?></p>
+            <?php endif; ?>
+
+            <div class="vibrations-phenomenon-metrics">
+              <span><strong><?= count($phenomenonJobs) ?></strong> recientes</span>
+              <span><strong><?= $completedCount ?></strong> completos</span>
+              <span>
+                <strong><?= $latestJob !== null && is_numeric($latestJob['baseline_distance_score'] ?? null) ? htmlspecialchars(vibrations_format_value($latestJob['baseline_distance_score'], '%'), ENT_QUOTES, 'UTF-8') : 'n/d' ?></strong>
+                distancia
+              </span>
+            </div>
+
+            <?php if ($phenomenonJobs !== []): ?>
+              <div class="vibrations-mini-history">
+                <?php foreach ($phenomenonJobs as $job): ?>
+                  <div>
+                    <span><?= htmlspecialchars((string) $job['created_at'], ENT_QUOTES, 'UTF-8') ?></span>
+                    <span><?= htmlspecialchars((string) $job['status'], ENT_QUOTES, 'UTF-8') ?></span>
+                    <?php if (($job['status'] ?? '') === 'completed'): ?>
+                      <a href="/portal/vibrations.php?job_id=<?= (int) $job['id'] ?>#vibrations-report">Ver</a>
+                    <?php endif; ?>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            <?php endif; ?>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </article>
+
   <section class="panel-grid">
     <article class="card">
       <span class="section-tag">Nuevo analisis</span>
       <h2>Cargar archivo DATS</h2>
-      <p>Cada archivo procesado consume 1 coin de Vibrations. La API acepta capturas de hasta 3 minutos.</p>
+      <p>Selecciona el fenomeno observado antes de cargar la captura. Si es nuevo, deja el selector en crear y completa su identificacion.</p>
 
       <form method="post" action="/portal/vibrations.php" enctype="multipart/form-data" class="form-block">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
@@ -399,47 +468,16 @@ render_app_header('Vibrations | Analisis DATS');
     </article>
 
     <article class="card">
-      <span class="section-tag">API</span>
-      <h2>Servicio conectado</h2>
-      <p>Endpoint configurado para el procesamiento de sensores inerciales:</p>
-      <code><?= htmlspecialchars(vibrations_api_url(), ENT_QUOTES, 'UTF-8') ?></code>
+      <span class="section-tag">Baseline</span>
+      <h2>Comparacion por fenomeno</h2>
+      <p>El primer objetivo es fijar una captura representativa para cada fenomeno. A partir de ahi, cada nuevo archivo se compara contra ese punto de referencia.</p>
       <ul class="service-list">
-        <li>Ventanas compactas para observacion temporal</li>
-        <li>Resumen global por acelerometro y giroscopio</li>
-        <li>Score robusto para cambios fuertes por ventana</li>
+        <li>Marca un analisis completado como baseline desde su historial.</li>
+        <li>Las distancias se calculan solo dentro del mismo fenomeno.</li>
+        <li>Los cambios fuertes quedan visibles en ventanas de observacion.</li>
       </ul>
     </article>
   </section>
-
-  <article class="card">
-    <span class="section-tag">Fenomenos</span>
-    <h2>Fenomenos observados a tu cargo</h2>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>ID externo</th>
-            <th>Descripcion</th>
-            <th>Baseline</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php if ($phenomena === []): ?>
-            <tr><td colspan="4">Crea el primer fenomeno al cargar un archivo DATS.</td></tr>
-          <?php endif; ?>
-          <?php foreach ($phenomena as $phenomenon): ?>
-            <tr>
-              <td><?= htmlspecialchars((string) $phenomenon['name'], ENT_QUOTES, 'UTF-8') ?></td>
-              <td><?= htmlspecialchars((string) ($phenomenon['external_id'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
-              <td><?= htmlspecialchars((string) ($phenomenon['description'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
-              <td><?= ((int) ($phenomenon['baseline_job_id'] ?? 0)) > 0 ? '#' . (int) $phenomenon['baseline_job_id'] : 'n/d' ?></td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
-  </article>
 
   <article class="card">
     <span class="section-tag">Historial</span>

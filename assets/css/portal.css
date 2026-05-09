@@ -299,6 +299,93 @@
   overflow-wrap: anywhere;
 }
 
+.vibrations-phenomena-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.vibrations-phenomenon-card {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.vibrations-phenomenon-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.vibrations-phenomenon-head > div {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.vibrations-phenomenon-head strong {
+  font-size: 1.05rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.vibrations-phenomenon-head span,
+.vibrations-phenomenon-card p,
+.vibrations-mini-history span {
+  color: var(--color-muted);
+}
+
+.vibrations-phenomenon-card p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.vibrations-phenomenon-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.vibrations-phenomenon-metrics span {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.65rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  min-width: 0;
+}
+
+.vibrations-phenomenon-metrics strong {
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.vibrations-mini-history {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.vibrations-mini-history div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.65rem;
+  align-items: center;
+  font-size: 0.86rem;
+}
+
+.vibrations-mini-history a {
+  color: var(--color-accent);
+  font-weight: 800;
+}
+
 .audiometer-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);

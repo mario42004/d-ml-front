@@ -263,6 +263,51 @@ function vibrations_trend_summary_html(array $points, ?float $baselineValue, str
         . '</div>';
 }
 
+function vibrations_delta_percent(?float $current, ?float $reference): ?float
+{
+    if ($current === null || $reference === null || abs($reference) < 0.000001) {
+        return null;
+    }
+
+    return (($current - $reference) / abs($reference)) * 100.0;
+}
+
+function vibrations_signed_delta_text(?float $current, ?float $reference, string $unit = ''): string
+{
+    if ($current === null || $reference === null) {
+        return 'n/d';
+    }
+
+    $delta = $current - $reference;
+    $percent = vibrations_delta_percent($current, $reference);
+    $prefix = $delta >= 0 ? '+' : '';
+    $text = $prefix . vibrations_format_value($delta, $unit);
+
+    if ($percent !== null) {
+        $text .= ' / ' . ($percent >= 0 ? '+' : '') . vibrations_format_value($percent, '%');
+    }
+
+    return $text;
+}
+
+function vibrations_control_status(?float $distanceOrDeltaPercent): array
+{
+    if ($distanceOrDeltaPercent === null) {
+        return ['label' => 'Sin datos', 'class' => 'is-muted'];
+    }
+
+    $value = abs($distanceOrDeltaPercent);
+    if ($value >= 75.0) {
+        return ['label' => 'Cambio alto', 'class' => 'is-high'];
+    }
+
+    if ($value >= 25.0) {
+        return ['label' => 'Cambio medio', 'class' => 'is-medium'];
+    }
+
+    return ['label' => 'Cerca de referencia', 'class' => 'is-stable'];
+}
+
 function vibrations_svg_polyline(array $points, ?float $baselineValue = null, string $scale = 'linear'): string
 {
     if ($points === []) {
@@ -803,6 +848,7 @@ render_app_header('Vibrations | Análisis DATS');
             $baselineJobId = (int) ($phenomenon['baseline_job_id'] ?? 0);
             $baselineJob = $baselineJobId > 0 ? get_vibration_job_by_id($baselineJobId) : null;
             $baselineAnalysis = is_array($baselineJob) ? vibrations_load_analysis_for_job($baselineJob) : null;
+            $latestAnalysis = is_array($latestCompletedJob ?? null) ? vibrations_load_analysis_for_job($latestCompletedJob) : null;
           ?>
           <section class="vibrations-baseline-card">
             <div class="vibrations-baseline-head">
@@ -826,40 +872,59 @@ render_app_header('Vibrations | Análisis DATS');
               </span>
             </div>
 
-            <div class="vibrations-trend-panel">
-              <div>
-                <strong>Distancia al baseline</strong>
-                <span>Escala suavizada para que los saltos grandes no aplasten el resto de la historia.</span>
-              </div>
-              <?php
-                $distancePoints = [];
-                foreach (array_reverse($phenomenonJobs) as $job) {
-                    if (($job['status'] ?? '') === 'completed' && is_numeric($job['baseline_distance_score'] ?? null)) {
-                        $distancePoints[] = ['value' => (float) $job['baseline_distance_score']];
-                    }
-                }
-              ?>
-              <?= vibrations_trend_summary_html($distancePoints, 0.0, '%') ?>
-              <?= vibrations_distance_svg($phenomenonJobs) ?>
-            </div>
+            <?php
+              $distanceValue = is_array($latestCompletedJob) && is_numeric($latestCompletedJob['baseline_distance_score'] ?? null)
+                  ? (float) $latestCompletedJob['baseline_distance_score']
+                  : null;
+              $distanceStatus = vibrations_control_status($distanceValue);
+            ?>
+            <div class="table-wrap">
+              <table class="vibrations-comparison-table">
+                <thead>
+                  <tr>
+                    <th>Métrica de control</th>
+                    <th>Referencia</th>
+                    <th>Última captura</th>
+                    <th>Desviación</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <strong>Distancia a referencia</strong>
+                      <span>Índice global de separación contra la captura de referencia.</span>
+                    </td>
+                    <td>0 %</td>
+                    <td><?= htmlspecialchars($distanceValue === null ? 'n/d' : vibrations_format_value($distanceValue, '%'), ENT_QUOTES, 'UTF-8') ?></td>
+                    <td><?= htmlspecialchars($distanceValue === null ? 'n/d' : '+' . vibrations_format_value($distanceValue, '%'), ENT_QUOTES, 'UTF-8') ?></td>
+                    <td><span class="vibrations-control-status <?= htmlspecialchars($distanceStatus['class'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($distanceStatus['label'], ENT_QUOTES, 'UTF-8') ?></span></td>
+                  </tr>
 
-            <div class="vibrations-trend-grid">
-              <?php foreach ($trendDefinitions as $definition): ?>
-                <?php
-                  $points = vibrations_trend_points($phenomenonJobs, $definition);
-                  $baselineValue = is_array($baselineAnalysis)
-                      ? vibrations_trend_metric_value($baselineAnalysis, (string) $definition['key'], $definition['sensor'] ?? null, $definition['path'] ?? null)
-                      : null;
-                ?>
-                <div class="vibrations-trend-panel">
-                  <div>
-                    <strong><?= htmlspecialchars((string) $definition['label'], ENT_QUOTES, 'UTF-8') ?></strong>
-                    <span><?= count($points) < 3 ? 'Tendencia inicial; se estabiliza al subir más capturas.' : 'Evolución histórica contra el punto base.' ?></span>
-                  </div>
-                  <?= vibrations_trend_summary_html($points, $baselineValue) ?>
-                  <?= vibrations_svg_polyline($points, $baselineValue) ?>
-                </div>
-              <?php endforeach; ?>
+                  <?php foreach ($trendDefinitions as $definition): ?>
+                    <?php
+                      $currentValue = is_array($latestAnalysis)
+                          ? vibrations_trend_metric_value($latestAnalysis, (string) $definition['key'], $definition['sensor'] ?? null, $definition['path'] ?? null)
+                          : null;
+                      $baselineValue = is_array($baselineAnalysis)
+                          ? vibrations_trend_metric_value($baselineAnalysis, (string) $definition['key'], $definition['sensor'] ?? null, $definition['path'] ?? null)
+                          : null;
+                      $deltaPercent = vibrations_delta_percent($currentValue, $baselineValue);
+                      $status = vibrations_control_status($deltaPercent);
+                    ?>
+                    <tr>
+                      <td>
+                        <strong><?= htmlspecialchars((string) $definition['label'], ENT_QUOTES, 'UTF-8') ?></strong>
+                        <span>Seguimiento de cambio respecto a la referencia del fenómeno.</span>
+                      </td>
+                      <td><?= htmlspecialchars($baselineValue === null ? 'n/d' : vibrations_format_value($baselineValue), ENT_QUOTES, 'UTF-8') ?></td>
+                      <td><?= htmlspecialchars($currentValue === null ? 'n/d' : vibrations_format_value($currentValue), ENT_QUOTES, 'UTF-8') ?></td>
+                      <td><?= htmlspecialchars(vibrations_signed_delta_text($currentValue, $baselineValue), ENT_QUOTES, 'UTF-8') ?></td>
+                      <td><span class="vibrations-control-status <?= htmlspecialchars($status['class'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($status['label'], ENT_QUOTES, 'UTF-8') ?></span></td>
+                    </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
             </div>
           </section>
       </div>

@@ -568,6 +568,49 @@
   font-size: 0.7rem;
 }
 
+.vibrations-comparison-table td:first-child {
+  min-width: 13rem;
+}
+
+.vibrations-comparison-table td:first-child span {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.vibrations-control-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.32rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.vibrations-control-status.is-stable {
+  background: rgba(20, 184, 166, 0.16);
+  color: #0f766e;
+}
+
+.vibrations-control-status.is-medium {
+  background: rgba(245, 158, 11, 0.18);
+  color: #92400e;
+}
+
+.vibrations-control-status.is-high {
+  background: rgba(239, 68, 68, 0.16);
+  color: #991b1b;
+}
+
+.vibrations-control-status.is-muted {
+  background: rgba(100, 116, 139, 0.14);
+  color: #475569;
+}
+
 .audiometer-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);

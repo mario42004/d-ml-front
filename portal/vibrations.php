@@ -413,6 +413,10 @@ render_app_header('Vibrations | Análisis DATS');
       <span class="section-tag">Nuevo análisis</span>
       <h2>Cargar archivo DATS</h2>
       <p>Selecciona el fenómeno observado antes de cargar la captura. Si es nuevo, deja el selector en crear y completa su identificación.</p>
+      <div class="coin-balance-strip">
+        <strong><?= (int) $vibrationsCoins ?></strong>
+        <span>coins disponibles para Vibrations</span>
+      </div>
 
       <form method="post" action="/portal/vibrations.php" enctype="multipart/form-data" class="form-block">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
@@ -421,7 +425,7 @@ render_app_header('Vibrations | Análisis DATS');
         <?php if ($phenomena !== []): ?>
           <div>
             <label for="phenomenon_id">Fenómeno observado existente</label>
-            <select id="phenomenon_id" name="phenomenon_id">
+            <select id="phenomenon_id" name="phenomenon_id" <?= $vibrationsCoins > 0 ? '' : 'disabled' ?>>
               <option value="0">Crear nuevo fenómeno</option>
               <?php foreach ($phenomena as $phenomenon): ?>
                 <option value="<?= (int) $phenomenon['id'] ?>">
@@ -435,23 +439,23 @@ render_app_header('Vibrations | Análisis DATS');
         <div class="form-grid two">
           <div>
             <label for="phenomenon_label">Nuevo fenómeno observado</label>
-            <input id="phenomenon_label" name="phenomenon_label" type="text" maxlength="190" placeholder="Motor, carro, bomba, estructura">
+            <input id="phenomenon_label" name="phenomenon_label" type="text" maxlength="190" placeholder="Motor, carro, bomba, estructura" <?= $vibrationsCoins > 0 ? '' : 'disabled' ?>>
           </div>
           <div>
             <label for="external_id">ID externo</label>
-            <input id="external_id" name="external_id" type="text" maxlength="120" placeholder="Equipo, activo o referencia">
+            <input id="external_id" name="external_id" type="text" maxlength="120" placeholder="Equipo, activo o referencia" <?= $vibrationsCoins > 0 ? '' : 'disabled' ?>>
           </div>
         </div>
 
         <div>
           <label for="phenomenon_description">Descripción del fenómeno</label>
-          <input id="phenomenon_description" name="phenomenon_description" type="text" maxlength="255" placeholder="Contexto, ubicación, montaje o condición de medición">
+          <input id="phenomenon_description" name="phenomenon_description" type="text" maxlength="255" placeholder="Contexto, ubicación, montaje o condición de medición" <?= $vibrationsCoins > 0 ? '' : 'disabled' ?>>
         </div>
 
         <div class="form-grid two">
           <div>
             <label for="window_ms">Ventana de observación</label>
-            <select id="window_ms" name="window_ms">
+            <select id="window_ms" name="window_ms" <?= $vibrationsCoins > 0 ? '' : 'disabled' ?>>
               <option value="500" selected>500 ms</option>
               <option value="250">250 ms</option>
               <option value="1000">1000 ms</option>
@@ -459,12 +463,17 @@ render_app_header('Vibrations | Análisis DATS');
           </div>
           <div>
             <label for="dat_file">Archivo .dat</label>
-            <input id="dat_file" name="dat_file" type="file" accept=".dat,text/plain" required>
+            <input id="dat_file" name="dat_file" type="file" accept=".dat,text/plain" <?= $vibrationsCoins > 0 ? '' : 'disabled' ?> required>
           </div>
         </div>
 
         <button class="button" type="submit" <?= $vibrationsCoins > 0 ? '' : 'disabled' ?>>Procesar DATS</button>
       </form>
+
+      <div class="helper">
+        <strong>Qué ocurre al subir</strong>
+        <span><?= $vibrationsCoins > 0 ? 'Cada procesamiento completado consume 1 coin de Vibrations.' : 'No tienes coins disponibles para Vibrations. Solicita una recarga al superadmin.' ?></span>
+      </div>
     </article>
 
     <article class="card">

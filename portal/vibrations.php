@@ -908,6 +908,45 @@ render_app_header('Vibrations | Análisis DATS');
                   : null;
               $distanceStatus = vibrations_control_status($distanceValue);
             ?>
+            <div class="vibrations-visual-board">
+              <div>
+                <strong>Tendencia visual</strong>
+                <span>La línea muestra las capturas completadas en orden temporal. La referencia aparece como línea punteada o punto destacado.</span>
+              </div>
+
+              <div class="vibrations-trend-grid">
+                <article class="vibrations-trend-panel vibrations-trend-panel-wide">
+                  <div>
+                    <strong>Distancia global a referencia</strong>
+                    <span>Escala suavizada para que los saltos grandes no oculten el resto de la historia.</span>
+                  </div>
+                  <?= vibrations_distance_svg($completedPhenomenonJobs) ?>
+                  <div class="vibrations-trend-stats">
+                    <span><strong>0 %</strong> referencia</span>
+                    <span><strong><?= htmlspecialchars($distanceValue === null ? 'n/d' : vibrations_format_value($distanceValue, '%'), ENT_QUOTES, 'UTF-8') ?></strong> último</span>
+                    <span><strong><?= count($completedPhenomenonJobs) ?></strong> capturas</span>
+                  </div>
+                </article>
+
+                <?php foreach ($trendDefinitions as $definition): ?>
+                  <?php
+                    $trendPoints = vibrations_trend_points($completedPhenomenonJobs, $definition);
+                    $baselineValueForTrend = is_array($baselineAnalysis)
+                        ? vibrations_trend_metric_value($baselineAnalysis, (string) $definition['key'], $definition['sensor'] ?? null, $definition['path'] ?? null)
+                        : null;
+                  ?>
+                  <article class="vibrations-trend-panel">
+                    <div>
+                      <strong><?= htmlspecialchars((string) $definition['label'], ENT_QUOTES, 'UTF-8') ?></strong>
+                      <span>Comportamiento histórico del fenómeno seleccionado.</span>
+                    </div>
+                    <?= vibrations_svg_polyline($trendPoints, $baselineValueForTrend) ?>
+                    <?= vibrations_trend_summary_html($trendPoints, $baselineValueForTrend) ?>
+                  </article>
+                <?php endforeach; ?>
+              </div>
+            </div>
+
             <div class="table-shell">
               <table class="users-table vibrations-comparison-table">
                 <thead>

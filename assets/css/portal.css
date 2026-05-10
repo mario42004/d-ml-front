@@ -434,16 +434,16 @@
 
 .vibrations-baseline-details[open] summary {
   padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  border-bottom: 1px solid rgba(255, 199, 77, 0.08);
 }
 
 .vibrations-baseline-card {
   display: grid;
   gap: 1rem;
   padding: 1rem;
-  border: 1px solid rgba(31, 41, 55, 0.1);
+  border: 1px solid rgba(255, 199, 77, 0.08);
   border-radius: 8px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.028);
 }
 
 .vibrations-baseline-head,
@@ -477,19 +477,44 @@
   min-width: 10rem;
   padding: 0.7rem 0.8rem;
   border-radius: 8px;
-  background: #f8fafc;
+  border: 1px solid rgba(255, 199, 77, 0.08);
+  background: rgba(255, 255, 255, 0.045);
   color: var(--color-muted);
   font-size: 0.86rem;
 }
 
 .vibrations-baseline-summary strong {
-  color: var(--color-text);
+  color: #fff6e7;
   font-size: 1.1rem;
+}
+
+.vibrations-visual-board {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid rgba(255, 199, 77, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.vibrations-visual-board > div:first-child {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.vibrations-visual-board > div:first-child strong {
+  color: #fff6e7;
+  font-size: 1rem;
+}
+
+.vibrations-visual-board > div:first-child span {
+  color: var(--color-muted);
+  line-height: 1.5;
 }
 
 .vibrations-trend-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.85rem;
 }
 
@@ -498,9 +523,17 @@
   gap: 0.7rem;
   min-width: 0;
   padding: 0.85rem;
-  border: 1px solid rgba(31, 41, 55, 0.1);
+  border: 1px solid rgba(255, 199, 77, 0.08);
   border-radius: 8px;
-  background: #f9fafb;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.vibrations-trend-panel-wide {
+  grid-column: span 2;
+}
+
+.vibrations-trend-panel strong {
+  color: #fff6e7;
 }
 
 .vibrations-trend-stats {
@@ -515,14 +548,15 @@
   min-width: 0;
   padding: 0.55rem 0.6rem;
   border-radius: 8px;
-  background: #ffffff;
+  border: 1px solid rgba(255, 199, 77, 0.08);
+  background: rgba(255, 255, 255, 0.045);
   color: var(--color-muted);
   font-size: 0.78rem;
 }
 
 .vibrations-trend-stats strong {
   overflow-wrap: anywhere;
-  color: var(--color-text);
+  color: #fff6e7;
   font-size: 0.9rem;
   line-height: 1.2;
 }
@@ -535,36 +569,36 @@
 }
 
 .vibrations-chart-axis {
-  stroke: rgba(75, 85, 99, 0.28);
+  stroke: rgba(255, 199, 77, 0.16);
   stroke-width: 1;
 }
 
 .vibrations-chart-baseline {
-  stroke: #f97316;
+  stroke: #ffc74d;
   stroke-width: 2;
   stroke-dasharray: 5 5;
 }
 
 .vibrations-chart-line {
   fill: none;
-  stroke: #0f766e;
+  stroke: #46c797;
   stroke-width: 2.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .vibrations-chart-dot {
-  fill: #0f766e;
-  stroke: #fff;
+  fill: #46c797;
+  stroke: #18120b;
   stroke-width: 1.5;
 }
 
 .vibrations-chart-dot.is-baseline {
-  fill: #f97316;
+  fill: #ffc74d;
 }
 
 .vibrations-chart-label {
-  fill: var(--color-muted);
+  fill: #dbc69a;
   font-size: 0.7rem;
 }
 
@@ -953,6 +987,10 @@
   .audiometer-report-grid,
   .audiometer-action-row {
     grid-template-columns: 1fr;
+  }
+
+  .vibrations-trend-panel-wide {
+    grid-column: auto;
   }
 }
 
